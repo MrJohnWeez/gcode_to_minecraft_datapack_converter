@@ -1,9 +1,11 @@
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-Assets/AssetStoreTools*
+/gcode_to_minecraft_datapack_converter/[Ll]ibrary/
+/gcode_to_minecraft_datapack_converter/[Tt]emp/
+/gcode_to_minecraft_datapack_converter/[Oo]bj/
+/gcode_to_minecraft_datapack_converter/[Bb]uild/
+/gcode_to_minecraft_datapack_converter/[Bb]uilds/
+/gcode_to_minecraft_datapack_converter/Assets/AssetStoreTools*
+/gcode_to_minecraft_datapack_converter/[Ll]ogs/
+/gcode_to_minecraft_datapack_converter/[Mm]emoryCaptures/
 
 # Visual Studio cache directory
 .vs/
