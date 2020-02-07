@@ -6,6 +6,8 @@
 /gcode_to_minecraft_datapack_converter/Assets/AssetStoreTools*
 /gcode_to_minecraft_datapack_converter/[Ll]ogs/
 /gcode_to_minecraft_datapack_converter/[Mm]emoryCaptures/
+[Bb]uild/
+[Bb]uilds/
 
 # Visual Studio cache directory
 .vs/
