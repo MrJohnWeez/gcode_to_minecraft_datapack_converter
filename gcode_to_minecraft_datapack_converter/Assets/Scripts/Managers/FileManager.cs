@@ -13,10 +13,10 @@ using System.Threading.Tasks;
 public class FileManager : MonoBehaviour
 {
 	private const string _instructions = "Select a 3D printer Gcode file.";
-	public string currentGcodePath = "";
+	[NonSerialized] public string currentGcodePath = "";
 	[SerializeField] private TMP_Text _gcodeDisplay = null;
 	[SerializeField] private TMP_Text _filePathDisplay = null;
-	private Char[] _gcodeFileBuffer = null;
+	private static string[] _fileLines = null;
 
 	private void Start()
 	{
@@ -34,49 +34,46 @@ public class FileManager : MonoBehaviour
 		_filePathDisplay.text = currentGcodePath;
 
 		if(!string.IsNullOrEmpty(_filePathDisplay.text))
-		{
-			_ = DisplayFileAsync(_filePathDisplay.text, _gcodeFileBuffer, _gcodeDisplay);
-		}
+			_ = DisplayFileAsync(_filePathDisplay.text, _gcodeDisplay);
 		else
-		{
 			_gcodeDisplay.text = _instructions;
-		}
 	}
 
 	/// <summary>
 	/// Returns the contense of the gcode file (if read in)
 	/// </summary>
-	/// <returns></returns>
-	public Char[] GetGcodeFileBuffer()
+	/// <returns>fileLines</returns>
+	public string[] GetFileArray()
 	{
-		return _gcodeFileBuffer;
+		return _fileLines;
 	}
 
 	/// <summary>
 	/// Loads entire file into memory then displays it on the given tmp text object.
 	/// </summary>
 	/// <param name="path">The path of the file to read</param>
-	/// <param name="buffer">Buffer object that holds entire read in file</param>
 	/// <param name="textObject">Text mesh pro object used to display file contense</param>
-	/// <returns></returns>
-	static async Task DisplayFileAsync(string path, char[] buffer, TMP_Text textObject)
+	static async Task DisplayFileAsync(string path, TMP_Text textObject)
 	{
+		string fileAsString = "";
+		textObject.text = "Loading file...";
 		try
 		{
 			using (var sr = new StreamReader(path))
 			{
-				textObject.text = "Loading file...";
-				buffer = new Char[(int)sr.BaseStream.Length];
-				await sr.ReadAsync(buffer, 0, (int)sr.BaseStream.Length);
+				fileAsString = await sr.ReadToEndAsync();
 			}
-
-			textObject.text = new String(buffer);
 		}
 		catch (Exception e)
 		{
 			// Let the user know what went wrong.
 			textObject.text = "The file could not be read:\nError: ";
 			textObject.text += e.Message.ToString();
+		}
+		finally
+		{
+			textObject.text = fileAsString;
+			_fileLines = fileAsString.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 		}
 	}
 }
