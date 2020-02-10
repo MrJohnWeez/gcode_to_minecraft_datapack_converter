@@ -99,4 +99,16 @@ public class FileManager : MonoBehaviour
 	{
 		return DateTime.Now.ToString("yyyyMMddHHmmss");
 	}
+
+	public static string FolderPath(string dialogTitle, string startingFolder = "")
+	{
+		string[] selectedRootFolder = StandaloneFileBrowser.OpenFolderPanel(dialogTitle, startingFolder, false);
+
+		if (selectedRootFolder.Length > 0)
+		{
+			return selectedRootFolder[0];
+		}
+
+		return "";
+	}
 }

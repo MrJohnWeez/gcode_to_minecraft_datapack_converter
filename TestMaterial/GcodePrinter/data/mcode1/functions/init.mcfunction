@@ -1,5 +1,3 @@
-say mcode1 is printing...
-
 scoreboard objectives add gp_mcodeInited dummy
 scoreboard players set #mcode1 gp_mcodeInited 1
 
@@ -9,7 +7,7 @@ scoreboard players set #mcode1 gp_mcodeLineNum 0
 scoreboard objectives setdisplay sidebar gp_mcodeLineNum
 
 kill @e[type=minecraft:armor_stand,tag=PrintGroup]
-fill 1 53 12 -7 59 -1 minecraft:air replace
+#fill 1 53 12 -7 59 -1 minecraft:air replace
 
 # Set up local centerpoint where player is
 execute at @p run summon leash_knot ~ ~ ~ {Tags:[CenterPoint]}
