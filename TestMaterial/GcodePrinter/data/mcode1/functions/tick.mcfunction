@@ -1,0 +1,1 @@
+execute if score #mcode1 gp_mcodeInited matches 1 as @e[type=minecraft:armor_stand,limit=1,tag=PrintHead] run function mcode1:execute_mcode

@@ -2,27 +2,27 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GcodeManager : MonoBehaviour
+/// <summary>
+/// Parses gCode files and converts all commands into a list of string lists
+/// </summary>
+public class GcodeManager
 {
-	[SerializeField] private FileManager _fileManager = null;
-	private string[] _unparsedGcode = null;
-	private List<List<string>> _parsedGcode = new List<List<string>>();
-	
 	/// <summary>
 	/// Seperate each gcode line into a nested string list
 	/// </summary>
-	public void ParseGcodeFile()
+	public List<List<string>> ParseGcodeFile(string[] unparsedGcode)
 	{
-		_unparsedGcode = _fileManager.GetFileArray();
-		if(_unparsedGcode != null)
+		List<List<string>> parsedGcode = new List<List<string>>();
+		if (unparsedGcode != null)
 		{
-			for (int i = 0; i < _unparsedGcode.Length; i++)
+			for (int i = 0; i < unparsedGcode.Length; i++)
 			{
-				List<string> gcodeLineList = ParsePhrase(_unparsedGcode[i]);
+				List<string> gcodeLineList = ParsePhrase(unparsedGcode[i]);
 				if(gcodeLineList != null && gcodeLineList.Count >= 2)
-					_parsedGcode.Add(gcodeLineList);
+					parsedGcode.Add(gcodeLineList);
 			}
 		}
+		return parsedGcode;
 	}
 
 	/// <summary>

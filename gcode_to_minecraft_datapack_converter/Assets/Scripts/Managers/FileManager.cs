@@ -13,10 +13,15 @@ using System.Threading.Tasks;
 public class FileManager : MonoBehaviour
 {
 	private const string _instructions = "Select a 3D printer Gcode file.";
-	[NonSerialized] public string currentGcodePath = "";
+
+	
 	[SerializeField] private TMP_Text _gcodeDisplay = null;
 	[SerializeField] private TMP_Text _filePathDisplay = null;
-	private static string[] _fileLines = null;
+
+	private GcodeManager _gocdeManager = new GcodeManager();
+	private List<List<string>> _parsedGcode = new List<List<string>>();
+	private static string[] _gcodeLines = null;
+	private string _gcodePath = "";
 
 	private void Start()
 	{
@@ -30,22 +35,26 @@ public class FileManager : MonoBehaviour
     {
 		var extensions = new[] { new ExtensionFilter("RepRap toolchain Gcode File", "gcode") };
 		string[] gCodePaths = StandaloneFileBrowser.OpenFilePanel("Open File", "", extensions, false);
-		currentGcodePath = gCodePaths.Length > 0 ? gCodePaths[0] : "";
-		_filePathDisplay.text = currentGcodePath;
+		_gcodePath = gCodePaths.Length > 0 ? gCodePaths[0] : "";
+		_filePathDisplay.text = _gcodePath;
 
-		if(!string.IsNullOrEmpty(_filePathDisplay.text))
-			_ = DisplayFileAsync(_filePathDisplay.text, _gcodeDisplay);
+		if(!string.IsNullOrEmpty(_gcodePath))
+		{
+			DisplayFile(_gcodePath, _gcodeDisplay);
+			_gocdeManager.ParseGcodeFile(_gcodeLines);
+		}
 		else
 			_gcodeDisplay.text = _instructions;
 	}
 
-	/// <summary>
-	/// Returns the contense of the gcode file (if read in)
-	/// </summary>
-	/// <returns>fileLines</returns>
-	public string[] GetFileArray()
+	public List<List<string>> GetParsedGcodeLines()
 	{
-		return _fileLines;
+		return _parsedGcode;
+	}
+
+	public string GetGcodeFilePath()
+	{
+		return _gcodePath;
 	}
 
 	/// <summary>
@@ -53,7 +62,7 @@ public class FileManager : MonoBehaviour
 	/// </summary>
 	/// <param name="path">The path of the file to read</param>
 	/// <param name="textObject">Text mesh pro object used to display file contense</param>
-	static async Task DisplayFileAsync(string path, TMP_Text textObject)
+	public static void DisplayFile(string path, TMP_Text textObject)
 	{
 		string fileAsString = "";
 		textObject.text = "Loading file...";
@@ -61,7 +70,7 @@ public class FileManager : MonoBehaviour
 		{
 			using (var sr = new StreamReader(path))
 			{
-				fileAsString = await sr.ReadToEndAsync();
+				fileAsString = sr.ReadToEnd();
 			}
 		}
 		catch (Exception e)
@@ -73,7 +82,21 @@ public class FileManager : MonoBehaviour
 		finally
 		{
 			textObject.text = fileAsString;
-			_fileLines = fileAsString.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+			_gcodeLines = fileAsString.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 		}
+	}
+
+	public static string GetFileName(string inFileName)
+	{
+		int index = inFileName.LastIndexOf(".");
+		if (index > 0)
+			return inFileName.Substring(0, index);
+
+		return inFileName;
+	}
+
+	public static string GetDateNow()
+	{
+		return DateTime.Now.ToString("yyyyMMddHHmmss");
 	}
 }
