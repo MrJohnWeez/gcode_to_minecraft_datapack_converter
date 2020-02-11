@@ -10,6 +10,7 @@ using SFB;
 /// </summary>
 public class DatapackManager : MonoBehaviour
 {
+	private const int _numberOfRetries = 5;
 	
 	// String Constants
 	private const string c_StartFunctionSuffix = "_start";
@@ -51,8 +52,7 @@ public class DatapackManager : MonoBehaviour
 
 
 	[SerializeField] private FileManager _fileManager = null;
-
-	private string slash = Path.DirectorySeparatorChar.ToString();
+	
 	private string _templateCopy = "";
 
 	private string[] _excludeExtensions = new string[1] { ".meta" };
@@ -78,7 +78,7 @@ public class DatapackManager : MonoBehaviour
 
 	private void Start()
 	{
-		_templateCopy = Application.dataPath + "/StreamingAssets/CopyTemplate";
+		_templateCopy = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
 	}
 	
 	/// <summary>
@@ -87,7 +87,7 @@ public class DatapackManager : MonoBehaviour
 	public void GenerateDatapack()
 	{
 		SetUpVaribleNames();
-		_outputRoot = FileManager.FolderPath("Select where datapack will be saved");
+		_outputRoot = SafeFileManagement.FolderPath("Select where datapack will be saved");
 		if(!string.IsNullOrWhiteSpace(_outputRoot))
 		{
 			CopyTemplateAndRename();
@@ -109,7 +109,6 @@ public class DatapackManager : MonoBehaviour
 	private void UpdateCopiedFiles()
 	{
 		InitulizeKeyVars();
-		print("_printFunctions: " + _printFunctions);
 		UpdateAllCopiedFiles(_printFunctions);
 	}
 
@@ -121,8 +120,8 @@ public class DatapackManager : MonoBehaviour
 	{
 		if(Directory.Exists(folderPath))
 		{
-			string[] files = Directory.GetFiles(folderPath);
-			foreach(string file in files)
+			string[] files = SafeFileManagement.GetFilesPaths(folderPath, _numberOfRetries);
+			foreach (string file in files)
 			{
 				print("Updating: " + file);
 				UpdateInFileVars(file);
@@ -136,9 +135,9 @@ public class DatapackManager : MonoBehaviour
 	/// <param name="filePath">In file path</param>
 	private void UpdateInFileVars(string filePath)
 	{
-		string fileContents = FileManager.GetFileContents(filePath);
+		string fileContents = SafeFileManagement.GetFileContents(filePath);
 		fileContents = ReplaceStringVars(fileContents);
-		FileManager.SetFileContents(filePath, fileContents);
+		SafeFileManagement.SetFileContents(filePath, fileContents);
 	}
 
 	/// <summary>
@@ -160,47 +159,35 @@ public class DatapackManager : MonoBehaviour
 	/// </summary>
 	private void RenameFiles()
 	{
-		_printFunctions = _dataFolderPath + slash + "print" + slash + "functions";
-		string templateStart = _printFunctions + slash + c_TemplateNamespace + c_StartFunctionSuffix + c_McFunction;
-		_datapackStart = _printFunctions + slash + _datapackUUID + c_StartFunctionSuffix + c_McFunction;
-		File.Move(templateStart, _datapackStart);
-
-		string templateStop = _printFunctions + slash + c_TemplateNamespace + c_StopFunctionSuffix + c_McFunction;
-		_datapackStop = _printFunctions + slash + _datapackUUID + c_StopFunctionSuffix + c_McFunction;
-		File.Move(templateStop, _datapackStop);
+		_printFunctions = Path.Combine(_dataFolderPath, "print", "functions");
+		string templateStart = Path.Combine(_printFunctions, c_TemplateNamespace + c_StartFunctionSuffix + c_McFunction);
+		_datapackStart = Path.Combine(_printFunctions, _datapackUUID + c_StartFunctionSuffix + c_McFunction);
+		if(SafeFileManagement.MoveFile(templateStart, _datapackStart, _numberOfRetries))
+		{
+			string templateStop = Path.Combine(_printFunctions, c_TemplateNamespace + c_StopFunctionSuffix + c_McFunction);
+			_datapackStop = Path.Combine(_printFunctions, _datapackUUID + c_StopFunctionSuffix + c_McFunction);
+			SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfRetries);
+		}
 	}
-
-
-
-
-
-
-	// Make a safe directory move, directory.getfiles, file.move, file.copyto all inside the Filemanger class
-
-
-
-
-
-
-
 
 	/// <summary>
 	/// Copy folders and files from datapack tempate then rename folders
 	/// </summary>
 	private void CopyTemplateAndRename()
 	{
-		FileManager.DirectoryCopy(_templateCopy, _outputRoot, true, _excludeExtensions, 5);
+		SafeFileManagement.DirectoryCopy(_templateCopy, _outputRoot, true, _excludeExtensions, _numberOfRetries);
 
 		// Rename main datapack folder
-		string templateOutput = _outputRoot + slash + c_TemplateName;
-		_datapackRootPath = _outputRoot + slash + _datapackName;
-		Directory.Move(templateOutput, _datapackRootPath);
-
-		// Rename namespace folder
-		_dataFolderPath = _datapackRootPath + slash + c_Data;
-		string templateNamespace = _dataFolderPath + slash + c_TemplateNamespace;
-		_namespacePath = _dataFolderPath + slash + _datapackUUID;
-		Directory.Move(templateNamespace, _namespacePath);
+		string templateOutput = Path.Combine(_outputRoot, c_TemplateName);
+		_datapackRootPath = Path.Combine(_outputRoot, _datapackName);
+		if(SafeFileManagement.MoveDirectory(templateOutput, _datapackRootPath, _numberOfRetries))
+		{
+			// Rename namespace folder
+			_dataFolderPath = Path.Combine(_datapackRootPath, c_Data);
+			string templateNamespace = Path.Combine(_dataFolderPath, c_TemplateNamespace);
+			_namespacePath = Path.Combine(_dataFolderPath, _datapackUUID);
+			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, _numberOfRetries);
+		}
 	}
 
 	/// <summary>
@@ -209,8 +196,8 @@ public class DatapackManager : MonoBehaviour
 	private void SetUpVaribleNames()
 	{
 		_gcodeFilePath = _fileManager.GetGcodeFilePath();
-		_gcodeFileName = FileManager.GetFileName(Path.GetFileName(_gcodeFilePath));
-		_dateCreated = FileManager.GetDateNow();
+		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(_gcodeFilePath));
+		_dateCreated = SafeFileManagement.GetDateNow();
 		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 		_datapackName = c_MainDatapackName + "_" + _datapackUUID;
 		_shortName = _datapackUUID.FirstLast5();
