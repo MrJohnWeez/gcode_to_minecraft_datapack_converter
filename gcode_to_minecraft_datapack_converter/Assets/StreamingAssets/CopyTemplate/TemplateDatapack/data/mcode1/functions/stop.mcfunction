@@ -1,0 +1,1 @@
+scoreboard players set #mcode1 gp_mcodeInited 0
