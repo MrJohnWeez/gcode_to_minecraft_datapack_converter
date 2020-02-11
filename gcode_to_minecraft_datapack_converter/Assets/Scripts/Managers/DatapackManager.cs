@@ -70,12 +70,17 @@ public class DatapackManager : MonoBehaviour
 	private string _datapackRootPath = "";
 	private string _dataFolderPath = "";
 	private string _namespacePath = "";
+	private string _printFunctions = "";
+	private string _datapackStart = "";
+	private string _datapackStop = "";
+
+	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 
 	private void Start()
 	{
 		_templateCopy = Application.dataPath + "/StreamingAssets/CopyTemplate";
 	}
-
+	
 	/// <summary>
 	/// Start the generation of a datapack (Will take some time?)
 	/// </summary>
@@ -87,48 +92,104 @@ public class DatapackManager : MonoBehaviour
 		{
 			CopyTemplateAndRename();
 			RenameFiles();
+			UpdateCopiedFiles();
+			print("Finished!");
 			//GenerateMcFunctions(_fileManager.GetParsedGcodeLines());
 		}
 	}
 
+	/// <summary>
+	/// Populates the keyVar dictionary with all terms that should be replaced within the copied minecraft files
+	/// </summary>
+	public void InitulizeKeyVars()
+	{
+		_keyVars[c_TemplateNamespace] = _datapackUUID;
+	}
+	
+	private void UpdateCopiedFiles()
+	{
+		InitulizeKeyVars();
+		print("_printFunctions: " + _printFunctions);
+		UpdateAllCopiedFiles(_printFunctions);
+	}
 
+	/// <summary>
+	/// Update all files within a directory to correct varible names
+	/// </summary>
+	/// <param name="folderPath">In folder path</param>
+	private void UpdateAllCopiedFiles(string folderPath)
+	{
+		if(Directory.Exists(folderPath))
+		{
+			string[] files = Directory.GetFiles(folderPath);
+			foreach(string file in files)
+			{
+				print("Updating: " + file);
+				UpdateInFileVars(file);
+			}
+		}
+	}
 
+	/// <summary>
+	/// Replaces all instaces of varibles within a given file
+	/// </summary>
+	/// <param name="filePath">In file path</param>
+	private void UpdateInFileVars(string filePath)
+	{
+		string fileContents = FileManager.GetFileContents(filePath);
+		fileContents = ReplaceStringVars(fileContents);
+		FileManager.SetFileContents(filePath, fileContents);
+	}
 
-
-
-
-
-
-	// Need to make a function that takes in a filepath and replaces all varibles with correct words
-
-
-
-
-
-
-
-
-
-
-
+	/// <summary>
+	/// Replace all instaces of keys within given string value
+	/// </summary>
+	/// <param name="fileContents">The contents of a file to be changed</param>
+	/// <returns></returns>
+	private string ReplaceStringVars(string fileContents)
+	{
+		foreach(string key in _keyVars.Keys)
+		{
+			fileContents = fileContents.Replace(key, _keyVars[key]);
+		}
+		return fileContents;
+	}
+	
+	/// <summary>
+	/// Rename the start and stop files
+	/// </summary>
 	private void RenameFiles()
 	{
-		string printFunctions = _dataFolderPath + slash + "print" + slash + "functions";
-		string templateStart = printFunctions + slash + c_TemplateNamespace + c_StartFunctionSuffix + c_McFunction;
-		string datapackStart = printFunctions + slash + _datapackUUID + c_StartFunctionSuffix + c_McFunction;
-		File.Move(templateStart, datapackStart);
+		_printFunctions = _dataFolderPath + slash + "print" + slash + "functions";
+		string templateStart = _printFunctions + slash + c_TemplateNamespace + c_StartFunctionSuffix + c_McFunction;
+		_datapackStart = _printFunctions + slash + _datapackUUID + c_StartFunctionSuffix + c_McFunction;
+		File.Move(templateStart, _datapackStart);
 
-		string templateStop = printFunctions + slash + c_TemplateNamespace + c_StopFunctionSuffix + c_McFunction;
-		string datapackStop = printFunctions + slash + _datapackUUID + c_StopFunctionSuffix + c_McFunction;
-		File.Move(templateStop, datapackStop);
+		string templateStop = _printFunctions + slash + c_TemplateNamespace + c_StopFunctionSuffix + c_McFunction;
+		_datapackStop = _printFunctions + slash + _datapackUUID + c_StopFunctionSuffix + c_McFunction;
+		File.Move(templateStop, _datapackStop);
 	}
+
+
+
+
+
+
+	// Make a safe directory move, directory.getfiles, file.move, file.copyto all inside the Filemanger class
+
+
+
+
+
+
+
 
 	/// <summary>
 	/// Copy folders and files from datapack tempate then rename folders
 	/// </summary>
 	private void CopyTemplateAndRename()
 	{
-		FileManager.DirectoryCopy(_templateCopy, _outputRoot, true, _excludeExtensions);
+		FileManager.DirectoryCopy(_templateCopy, _outputRoot, true, _excludeExtensions, 5);
 
 		// Rename main datapack folder
 		string templateOutput = _outputRoot + slash + c_TemplateName;
