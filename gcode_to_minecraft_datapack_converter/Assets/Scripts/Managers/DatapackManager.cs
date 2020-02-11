@@ -10,6 +10,8 @@ using SFB;
 /// </summary>
 public class DatapackManager : MonoBehaviour
 {
+	private const int _numberOfRetries = 5;
+	
 	// String Constants
 	private const string c_StartFunctionSuffix = "_start";
 	private const string c_StopFunctionSuffix = "_stop";
@@ -27,6 +29,10 @@ public class DatapackManager : MonoBehaviour
 	private const string c_PrintheadTag = "printhead";
 	private const string c_CurrentNodeTag = "currentnode";
 	private const string c_PrintGroup = "PrintGroup";
+
+	//Template Names
+	private const string c_TemplateName = "TemplateDatapack";
+	private const string c_TemplateNamespace = "mcode1";
 
 	// Datapack hardcoded names
 	private const string c_MetaFileName = "pack.mcmeta";
@@ -46,9 +52,10 @@ public class DatapackManager : MonoBehaviour
 
 
 	[SerializeField] private FileManager _fileManager = null;
+	
+	private string _templateCopy = "";
 
-	private string slash = Path.DirectorySeparatorChar.ToString();
-
+	private string[] _excludeExtensions = new string[1] { ".meta" };
 	private string _gcodeFilePath = "";     // Path of gcode file on disk
 	private string _gcodeFileName = "";     // Main name of gcode file (without .gcode)
 	private string _dateCreated = "";       // Date datapack was created (almost UUID)
@@ -58,20 +65,128 @@ public class DatapackManager : MonoBehaviour
 	private string _fakePlayerName = "";    // The fake player name that datapack will use (39 chars or less)
 	private string _outputRoot = "";        // The root folder where the datapack will be saved to
 	private string _datapackRoot = "";		// The root of the datapack on drive
-	private string _mcodeFunctions = "";	// The path where all main functions are stored
+	private string _mcodeFunctions = "";    // The path where all main functions are stored
 
+	private string _datapackRootPath = "";
+	private string _dataFolderPath = "";
+	private string _namespacePath = "";
+	private string _printFunctions = "";
+	private string _datapackStart = "";
+	private string _datapackStop = "";
+
+	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
+
+	private void Start()
+	{
+		_templateCopy = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
+	}
+	
 	/// <summary>
 	/// Start the generation of a datapack (Will take some time?)
 	/// </summary>
 	public void GenerateDatapack()
 	{
 		SetUpVaribleNames();
-		_outputRoot = FileManager.FolderPath("Select where datapack will be saved");
-		print(_outputRoot);
+		_outputRoot = SafeFileManagement.FolderPath("Select where datapack will be saved");
 		if(!string.IsNullOrWhiteSpace(_outputRoot))
 		{
-			CreateDatapackFoldersAndBaseFiles();
-			GenerateMcFunctions(_fileManager.GetParsedGcodeLines());
+			CopyTemplateAndRename();
+			RenameFiles();
+			UpdateCopiedFiles();
+			print("Finished!");
+			//GenerateMcFunctions(_fileManager.GetParsedGcodeLines());
+		}
+	}
+
+	/// <summary>
+	/// Populates the keyVar dictionary with all terms that should be replaced within the copied minecraft files
+	/// </summary>
+	public void InitulizeKeyVars()
+	{
+		_keyVars[c_TemplateNamespace] = _datapackUUID;
+	}
+	
+	private void UpdateCopiedFiles()
+	{
+		InitulizeKeyVars();
+		UpdateAllCopiedFiles(_printFunctions);
+	}
+
+	/// <summary>
+	/// Update all files within a directory to correct varible names
+	/// </summary>
+	/// <param name="folderPath">In folder path</param>
+	private void UpdateAllCopiedFiles(string folderPath)
+	{
+		if(Directory.Exists(folderPath))
+		{
+			string[] files = SafeFileManagement.GetFilesPaths(folderPath, _numberOfRetries);
+			foreach (string file in files)
+			{
+				print("Updating: " + file);
+				UpdateInFileVars(file);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Replaces all instaces of varibles within a given file
+	/// </summary>
+	/// <param name="filePath">In file path</param>
+	private void UpdateInFileVars(string filePath)
+	{
+		string fileContents = SafeFileManagement.GetFileContents(filePath);
+		fileContents = ReplaceStringVars(fileContents);
+		SafeFileManagement.SetFileContents(filePath, fileContents);
+	}
+
+	/// <summary>
+	/// Replace all instaces of keys within given string value
+	/// </summary>
+	/// <param name="fileContents">The contents of a file to be changed</param>
+	/// <returns></returns>
+	private string ReplaceStringVars(string fileContents)
+	{
+		foreach(string key in _keyVars.Keys)
+		{
+			fileContents = fileContents.Replace(key, _keyVars[key]);
+		}
+		return fileContents;
+	}
+	
+	/// <summary>
+	/// Rename the start and stop files
+	/// </summary>
+	private void RenameFiles()
+	{
+		_printFunctions = Path.Combine(_dataFolderPath, "print", "functions");
+		string templateStart = Path.Combine(_printFunctions, c_TemplateNamespace + c_StartFunctionSuffix + c_McFunction);
+		_datapackStart = Path.Combine(_printFunctions, _datapackUUID + c_StartFunctionSuffix + c_McFunction);
+		if(SafeFileManagement.MoveFile(templateStart, _datapackStart, _numberOfRetries))
+		{
+			string templateStop = Path.Combine(_printFunctions, c_TemplateNamespace + c_StopFunctionSuffix + c_McFunction);
+			_datapackStop = Path.Combine(_printFunctions, _datapackUUID + c_StopFunctionSuffix + c_McFunction);
+			SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfRetries);
+		}
+	}
+
+	/// <summary>
+	/// Copy folders and files from datapack tempate then rename folders
+	/// </summary>
+	private void CopyTemplateAndRename()
+	{
+		SafeFileManagement.DirectoryCopy(_templateCopy, _outputRoot, true, _excludeExtensions, _numberOfRetries);
+
+		// Rename main datapack folder
+		string templateOutput = Path.Combine(_outputRoot, c_TemplateName);
+		_datapackRootPath = Path.Combine(_outputRoot, _datapackName);
+		if(SafeFileManagement.MoveDirectory(templateOutput, _datapackRootPath, _numberOfRetries))
+		{
+			// Rename namespace folder
+			_dataFolderPath = Path.Combine(_datapackRootPath, c_Data);
+			string templateNamespace = Path.Combine(_dataFolderPath, c_TemplateNamespace);
+			_namespacePath = Path.Combine(_dataFolderPath, _datapackUUID);
+			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, _numberOfRetries);
 		}
 	}
 
@@ -81,141 +196,14 @@ public class DatapackManager : MonoBehaviour
 	private void SetUpVaribleNames()
 	{
 		_gcodeFilePath = _fileManager.GetGcodeFilePath();
-		_gcodeFileName = FileManager.GetFileName(Path.GetFileName(_gcodeFilePath));
-		_dateCreated = FileManager.GetDateNow();
+		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(_gcodeFilePath));
+		_dateCreated = SafeFileManagement.GetDateNow();
 		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 		_datapackName = c_MainDatapackName + "_" + _datapackUUID;
 		_shortName = _datapackUUID.FirstLast5();
 		_fakePlayerName = c_FakePlayerChar + _datapackUUID.Truncate(-30);
 		LogDynamicVars();
 	}
-
-	/// <summary>
-	/// Create all folders and a few base files
-	/// </summary>
-	private void CreateDatapackFoldersAndBaseFiles()
-	{
-		_datapackRoot = _outputRoot + slash + _datapackName;
-		Directory.CreateDirectory(_datapackRoot);
-
-		string dataFolder = _datapackRoot + slash + c_Data;
-		Directory.CreateDirectory(dataFolder);
-		CreateMetaFile(_datapackRoot + slash + c_MetaFileName);
-
-		string minecraftTagsFolder = dataFolder + slash + c_Minecraft + slash + c_Tags + slash + c_Functions;
-		Directory.CreateDirectory(minecraftTagsFolder);
-		CreateLoadTickTags(minecraftTagsFolder);
-
-		string printFunctions = dataFolder + slash + c_PrintPrefix + slash + c_Functions;
-		Directory.CreateDirectory(printFunctions);
-		CreatePrintingStates(printFunctions);
-
-		_mcodeFunctions = dataFolder + slash + _datapackUUID + slash + c_Functions;
-		Directory.CreateDirectory(_mcodeFunctions);
-	}
-
-	/// <summary>
-	/// Create mcmetafile
-	/// </summary>
-	/// <param name="filePath"></param>
-	private void CreateMetaFile(string filePath)
-	{
-		using (StreamWriter sw = File.CreateText(filePath))
-		{
-			string jsonLine = "{\"pack\": {\"pack_format\": " + 
-								c_DatapackFormat.ToString() +
-								", \"description\": \"Print out a gcode file within minecraft!\"}}";
-			sw.WriteLine(jsonLine);
-		}
-	}
-
-	/// <summary>
-	/// Create load and tick minecraft files
-	/// </summary>
-	/// <param name="filePath">Filepath to create these in</param>
-	private void CreateLoadTickTags(string filePath)
-	{
-		string load = filePath + slash + c_Load + c_Joson;
-		string tick = filePath + slash + c_Tick + c_Joson;
-
-		using (StreamWriter sw = File.CreateText(load))
-		{
-			string jsonLine = "{ \"values\": [\"" +
-								_datapackUUID +
-								":reload\"]}";
-			 sw.WriteLine(jsonLine);
-		}
-
-		using (StreamWriter sw = File.CreateText(tick))
-		{
-			string jsonLine = "{ \"values\": [\"" +
-								_datapackUUID +
-								":tick\"]}";
-			sw.WriteLine(jsonLine);
-		}
-	}
-
-	/// <summary>
-	/// Create the printing state functions
-	/// </summary>
-	/// <param name="filePath">Filepath to create these in</param>
-	private void CreatePrintingStates(string filePath)
-	{
-		string start = filePath + slash + _datapackUUID + c_StartFunctionSuffix + c_McFunction;
-		string stop = filePath + slash + _datapackUUID + c_StopFunctionSuffix + c_McFunction;
-
-		using (StreamWriter sw = File.CreateText(start))
-		{
-			string commands = "say printing " + _datapackUUID + "...\n" +
-								"function " + _datapackUUID + ":" + c_Init;
-			sw.WriteLine(commands);
-		}
-
-		using (StreamWriter sw = File.CreateText(stop))
-		{
-			string commands = "say printing " + _datapackUUID + "...\n" +
-								"function " + _datapackUUID + ":" + c_Stop;
-			sw.WriteLine(commands);
-		}
-	}
-
-	private void GenerateMcFunctions(List<List<string>> data)
-	{
-		string gp_mcodeInited = c_ScoreboardPrefix + _datapackUUID + "Inited";
-		string gp_mcodeLineNum = c_ScoreboardPrefix + _datapackUUID + "LineNumber";
-		string printGroupTag = _datapackUUID + c_PrintGroup;
-		string centerpointTag = _datapackUUID + c_CenterpointTag;
-
-		using (StreamWriter sw = File.CreateText(_mcodeFunctions + slash + c_Init + c_McFunction))
-		{
-			string commands = CreateScoreboardValue(gp_mcodeInited, _fakePlayerName, 1) + "\n" +
-								CreateScoreboardValue(gp_mcodeLineNum, _fakePlayerName, 1) + "\n" +
-								"scoreboard objectives setdisplay sidebar " + gp_mcodeLineNum + "\n" +
-								"kill @e[type=minecraft:armor_stand,tag=" + printGroupTag + "]\n" +
-								"execute at @p run summon leash_knot ~ ~ ~ {Tags:[" + centerpointTag + "]}\n" +
-								"execute at @e[type=leash_knot,limit=1,tag=CenterPoint] run summon armor_stand ~ ~0.5 ~ {DisabledSlots:2039583, Small:1b, Tags:[";
-			sw.WriteLine(commands);
-		}
-	}
-
-	/// <summary>
-	/// Creates a scoreboard value and optionaly sets a player's score to it
-	/// </summary>
-	/// <param name="scoreName">The name of the scoreboard objective</param>
-	/// <param name="playerName">The name of the player to set the score to</param>
-	/// <param name="startValue">The start value of the score</param>
-	/// <returns></returns>
-	private string CreateScoreboardValue(string scoreName, string playerName = "", int startValue = 0)
-	{
-		string returnThis = "scoreboard objectives add " + scoreName + " dummy\n";
-		if(!string.IsNullOrWhiteSpace(playerName))
-		{
-			returnThis += "\nscoreboard players set " + playerName + " " + scoreName + " " + startValue.ToString();
-		}
-
-		return returnThis;
-	}
-
 
 	/// <summary>
 	/// Prints all vars to unity console
