@@ -1,1 +1,1 @@
-scoreboard players set #mcode1 gp_mcodeInited 0
+scoreboard players set #fakePlayerVar gp_ArgVar001 0

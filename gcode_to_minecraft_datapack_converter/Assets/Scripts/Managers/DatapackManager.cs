@@ -61,7 +61,7 @@ public class DatapackManager : MonoBehaviour
 	private string _dateCreated = "";       // Date datapack was created (almost UUID)
 	private string _datapackUUID = "";      // Simulates a UUID because the use case of this program is low
 	private string _datapackName = "";      // Name of the datapack
-	private string _shortName = "";         // Name used to make scoreboard values unique (10 chars or less)
+	private string _shortUUID = "";         // Name used to make scoreboard values unique (10 chars or less)
 	private string _fakePlayerName = "";    // The fake player name that datapack will use (39 chars or less)
 	private string _outputRoot = "";        // The root folder where the datapack will be saved to
 	private string _datapackRoot = "";		// The root of the datapack on drive
@@ -70,9 +70,11 @@ public class DatapackManager : MonoBehaviour
 	private string _datapackRootPath = "";
 	private string _dataFolderPath = "";
 	private string _namespacePath = "";
+	private string _namespaceFunctions = "";
 	private string _printFunctions = "";
 	private string _datapackStart = "";
 	private string _datapackStop = "";
+	private string _datapackMcFuncTags = "";
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 
@@ -103,13 +105,25 @@ public class DatapackManager : MonoBehaviour
 	/// </summary>
 	public void InitulizeKeyVars()
 	{
+		string scoreboardVar = c_ScoreboardPrefix + _shortUUID;
+		string tag = "Tag" + _datapackUUID;
 		_keyVars[c_TemplateNamespace] = _datapackUUID;
+		_keyVars["gp_ArgVar001"] = scoreboardVar + "001";
+		_keyVars["gp_ArgVar002"] = scoreboardVar + "002";
+		_keyVars["#fakePlayerVar"] = _fakePlayerName;
+		_keyVars["TagPrintGroup"] = tag + "PrintGroup";
+		_keyVars["TagCenterPoint"] = tag + "CenterPoint";
+		_keyVars["TagHome"] = tag + "Home";
+		_keyVars["TagPrintHead"] = tag + "PrintHead";
+		_keyVars["TagNode"] = tag + "Node";
 	}
 	
 	private void UpdateCopiedFiles()
 	{
 		InitulizeKeyVars();
+		UpdateAllCopiedFiles(_datapackMcFuncTags);
 		UpdateAllCopiedFiles(_printFunctions);
+		UpdateAllCopiedFiles(_namespaceFunctions);
 	}
 
 	/// <summary>
@@ -187,6 +201,9 @@ public class DatapackManager : MonoBehaviour
 			string templateNamespace = Path.Combine(_dataFolderPath, c_TemplateNamespace);
 			_namespacePath = Path.Combine(_dataFolderPath, _datapackUUID);
 			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, _numberOfRetries);
+
+			_namespaceFunctions = Path.Combine(_namespacePath, c_Functions);
+			_datapackMcFuncTags = Path.Combine(_dataFolderPath, c_Minecraft, c_Tags, c_Functions);
 		}
 	}
 
@@ -200,7 +217,7 @@ public class DatapackManager : MonoBehaviour
 		_dateCreated = SafeFileManagement.GetDateNow();
 		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 		_datapackName = c_MainDatapackName + "_" + _datapackUUID;
-		_shortName = _datapackUUID.FirstLast5();
+		_shortUUID = _datapackUUID.FirstLast5();
 		_fakePlayerName = c_FakePlayerChar + _datapackUUID.Truncate(-30);
 		LogDynamicVars();
 	}
@@ -215,7 +232,7 @@ public class DatapackManager : MonoBehaviour
 			"_dateCreated: " + _dateCreated + "\n" +
 			"_datapackUUID: " + _datapackUUID + "\n" +
 			"_datapackName: " + _datapackName + "\n" +
-			"_shortName: " + _shortName + "\n" +
+			"_shortName: " + _shortUUID + "\n" +
 			"_fakePlayerName: " + _fakePlayerName);
 	}
 }
