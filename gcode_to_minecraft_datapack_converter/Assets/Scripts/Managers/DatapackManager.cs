@@ -15,41 +15,21 @@ public class DatapackManager : MonoBehaviour
 	// String Constants
 	private const string c_StartFunctionSuffix = "_start";
 	private const string c_StopFunctionSuffix = "_stop";
-	private const string c_PrintPrefix = "print";
 	private const string c_ScoreboardPrefix = "gp_";
 	private const string c_Line = "line";
 	private const string c_MainDatapackName = "GcodePrinter";
-	private const string c_ExecuteLine = "execute_mcode_line";
-	private const string c_NextLine = "next_mcode_line";
-	private const string c_Reload = "reload";
-	private const string c_Stop = "stop";
-
-	// Tags
-	private const string c_CenterpointTag = "centerpoint";
-	private const string c_PrintheadTag = "printhead";
-	private const string c_CurrentNodeTag = "currentnode";
-	private const string c_PrintGroup = "PrintGroup";
 
 	//Template Names
 	private const string c_TemplateName = "TemplateDatapack";
 	private const string c_TemplateNamespace = "mcode1";
 
 	// Datapack hardcoded names
-	private const string c_MetaFileName = "pack.mcmeta";
 	private const string c_Data = "data";
 	private const string c_Minecraft = "minecraft";
 	private const string c_Functions = "functions";
 	private const string c_McFunction = ".mcfunction";
-	private const string c_Joson = ".json";
-	private const string c_Init = "init";
-	private const string c_Tick = "tick";
 	private const string c_Tags = "tags";
-	private const string c_Load = "load";
 	private const string c_FakePlayerChar = "#";
-
-	// Datapack format version
-	private const int c_DatapackFormat = 5;
-
 
 	[SerializeField] private FileManager _fileManager = null;
 	
@@ -64,8 +44,6 @@ public class DatapackManager : MonoBehaviour
 	private string _shortUUID = "";         // Name used to make scoreboard values unique (10 chars or less)
 	private string _fakePlayerName = "";    // The fake player name that datapack will use (39 chars or less)
 	private string _outputRoot = "";        // The root folder where the datapack will be saved to
-	private string _datapackRoot = "";		// The root of the datapack on drive
-	private string _mcodeFunctions = "";    // The path where all main functions are stored
 
 	private string _datapackRootPath = "";
 	private string _dataFolderPath = "";
@@ -77,6 +55,7 @@ public class DatapackManager : MonoBehaviour
 	private string _datapackMcFuncTags = "";
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
+	private McodeData _mcodeData = new McodeData();
 
 	private void Start()
 	{
@@ -95,9 +74,81 @@ public class DatapackManager : MonoBehaviour
 			CopyTemplateAndRename();
 			RenameFiles();
 			UpdateCopiedFiles();
+			_mcodeData = ConvertToMcodeData(_fileManager.GetParsedGcodeLines());
+			
+			
+
+			_mcodeData.Log();
 			print("Finished!");
-			//GenerateMcFunctions(_fileManager.GetParsedGcodeLines());
 		}
+	}
+
+
+	private McodeData ConvertToMcodeData(List<List<string>> parsedGcode)
+	{
+		McodeData newMcodeData = new McodeData();
+
+		float x = 0;
+		float y = 0;
+		float z = 0;
+		float f = 0;
+
+		foreach(List<string> gcodeLine in parsedGcode)
+		{
+			if(gcodeLine.Count > 1 && gcodeLine[0].ToUpper() == "G" && gcodeLine[1] == "1")
+			{
+				for(int i = 2; i < gcodeLine.Count; i++)
+				{
+					bool nextIsValid = i + 1 <= gcodeLine.Count - 1;
+					string upperTerm = gcodeLine[i].ToUpper();
+
+					if (nextIsValid)
+					{
+						if (upperTerm == "X")
+						{
+							try
+							{
+								x = float.Parse(gcodeLine[i + 1]);
+							}
+							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
+						}
+						else if (upperTerm == "Y")
+						{
+							try
+							{
+								y = float.Parse(gcodeLine[i + 1]);
+							}
+							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
+						}
+						else if (upperTerm == "Z")
+						{
+							try
+							{
+								z = float.Parse(gcodeLine[i + 1]);
+							}
+							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
+						}
+						else if (upperTerm == "F")
+						{
+							try
+							{
+								f = float.Parse(gcodeLine[i + 1]);
+							}
+							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
+						}
+					}
+				}
+
+				// If we made it here we know something should have changed so make it a new Mcode line
+				newMcodeData.data.Add(new McodeLine(x, y, z, f));
+			}
+		}
+		return newMcodeData;
+	}
+
+	private void LogFloatParseError(string stringThatTriedToParse, string causedException)
+	{
+		Debug.Log("Tried to parse: " + stringThatTriedToParse + " which is not a valid float!\n" + causedException);
 	}
 
 	/// <summary>

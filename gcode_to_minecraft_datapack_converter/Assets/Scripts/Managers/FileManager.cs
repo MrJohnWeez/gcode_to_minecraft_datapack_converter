@@ -37,7 +37,7 @@ public class FileManager : MonoBehaviour
 		if(!string.IsNullOrEmpty(_gcodePath))
 		{
 			_gcodeLines = SafeFileManagement.DisplayFile(_gcodePath, _gcodeDisplay);
-			_gocdeManager.ParseGcodeFile(_gcodeLines);
+			_parsedGcode = _gocdeManager.ParseGcodeFile(_gcodeLines);
 		}
 		else
 			_gcodeDisplay.text = _instructions;
