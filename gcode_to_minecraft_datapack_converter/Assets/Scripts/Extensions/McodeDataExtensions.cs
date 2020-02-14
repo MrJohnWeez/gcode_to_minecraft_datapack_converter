@@ -31,15 +31,15 @@ public static class McodeDataExtensions
 
 		if (value.data.Count > 0)
 		{
-			minX = value.data[0].x;
-			minY = value.data[0].y;
-			minZ = value.data[0].z;
+			minX = value.data[0].pos.x;
+			minY = value.data[0].pos.y;
+			minZ = value.data[0].pos.z;
 
 			foreach (McodeLine mcl in value.data)
 			{
-				minX = Mathf.Min(minX, mcl.x);
-				minY = Mathf.Min(minX, mcl.y);
-				minZ = Mathf.Min(minX, mcl.z);
+				minX = Mathf.Min(minX, mcl.pos.x);
+				minY = Mathf.Min(minX, mcl.pos.y);
+				minZ = Mathf.Min(minX, mcl.pos.z);
 			}
 		}
 
@@ -59,15 +59,15 @@ public static class McodeDataExtensions
 
 		if (value.data.Count > 0)
 		{
-			maxX = value.data[0].x;
-			maxY = value.data[0].y;
-			maxZ = value.data[0].z;
+			maxX = value.data[0].pos.x;
+			maxY = value.data[0].pos.y;
+			maxZ = value.data[0].pos.z;
 
 			foreach(McodeLine mcl in value.data)
 			{
-				maxX = Mathf.Max(maxX, mcl.x);
-				maxY = Mathf.Max(maxX, mcl.y);
-				maxZ = Mathf.Max(maxX, mcl.z);
+				maxX = Mathf.Max(maxX, mcl.pos.x);
+				maxY = Mathf.Max(maxX, mcl.pos.y);
+				maxZ = Mathf.Max(maxX, mcl.pos.z);
 			}
 		}
 		

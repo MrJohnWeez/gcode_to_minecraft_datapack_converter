@@ -10,7 +10,11 @@ using SFB;
 /// </summary>
 public class DatapackManager : MonoBehaviour
 {
-	private const int _numberOfRetries = 5;
+	// Mcode properties
+	private float _magnitudeScalar = 0.001f;
+	private float _maxMagnitude = 2f;
+
+	private const int _numberOfIORetryAttempts = 5;
 	
 	// String Constants
 	private const string c_StartFunctionSuffix = "_start";
@@ -33,7 +37,7 @@ public class DatapackManager : MonoBehaviour
 
 	[SerializeField] private FileManager _fileManager = null;
 	
-	private string _templateCopy = "";
+	private string _pathOfDatapackTemplate = "";	// Used to copy the common files needed for every mcode datapack
 
 	private string[] _excludeExtensions = new string[1] { ".meta" };
 	private string _gcodeFilePath = "";     // Path of gcode file on disk
@@ -45,21 +49,22 @@ public class DatapackManager : MonoBehaviour
 	private string _fakePlayerName = "";    // The fake player name that datapack will use (39 chars or less)
 	private string _outputRoot = "";        // The root folder where the datapack will be saved to
 
-	private string _datapackRootPath = "";
-	private string _dataFolderPath = "";
-	private string _namespacePath = "";
-	private string _namespaceFunctions = "";
-	private string _printFunctions = "";
-	private string _datapackStart = "";
-	private string _datapackStop = "";
-	private string _datapackMcFuncTags = "";
+	// Datapack folder and file paths
+	private string _datapackRootPath = "";	// Path where datapack will be saved on disk ----- data
+	private string _dataFolderPath = "";    // Data folder within datapack ------------------- datapack/data
+	private string _namespacePath = "";     // Namespace within datapack --------------------- datapack/data/namespace
+	private string _namespaceFunctions = "";// Where all functions will generate ------------- datapack/data/namespace/functions
+	private string _printFunctions = "";    // PrintFunction folder within datapack ---------- datapack/data/print/functions
+	private string _datapackStart = "";     // File name of mcode printing start function ---- datapack/data/print/functions/start.mcfunction
+	private string _datapackStop = "";      // File name of mcode printing stop function ----- datapack/data/print/functions/stop.mcfunction
+	private string _datapackMcFuncTags = "";// File path for --------------------------------- datapack/data/minecraft/tags/functions
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 	private McodeData _mcodeData = new McodeData();
 
 	private void Start()
 	{
-		_templateCopy = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
+		_pathOfDatapackTemplate = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
 	}
 	
 	/// <summary>
@@ -75,25 +80,29 @@ public class DatapackManager : MonoBehaviour
 			RenameFiles();
 			UpdateCopiedFiles();
 			_mcodeData = ConvertToMcodeData(_fileManager.GetParsedGcodeLines());
-			
-			
-
 			_mcodeData.Log();
+			WriteMinecraftCodeFiles();
 			print("Finished!");
 		}
+	}
+
+	private void WriteMinecraftCodeFiles()
+	{
+
 	}
 
 
 	private McodeData ConvertToMcodeData(List<List<string>> parsedGcode)
 	{
 		McodeData newMcodeData = new McodeData();
-
-		float x = 0;
-		float y = 0;
-		float z = 0;
+		Vector3 pos = new Vector3();
 		float f = 0;
+		bool extrude = false;
 
-		foreach(List<string> gcodeLine in parsedGcode)
+		// Add starting value
+		newMcodeData.data.Add(new McodeLine());
+
+		foreach (List<string> gcodeLine in parsedGcode)
 		{
 			if(gcodeLine.Count > 1 && gcodeLine[0].ToUpper() == "G" && gcodeLine[1] == "1")
 			{
@@ -108,7 +117,7 @@ public class DatapackManager : MonoBehaviour
 						{
 							try
 							{
-								x = float.Parse(gcodeLine[i + 1]);
+								pos.x = float.Parse(gcodeLine[i + 1]);
 							}
 							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
 						}
@@ -116,7 +125,7 @@ public class DatapackManager : MonoBehaviour
 						{
 							try
 							{
-								y = float.Parse(gcodeLine[i + 1]);
+								pos.z = float.Parse(gcodeLine[i + 1]);
 							}
 							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
 						}
@@ -124,7 +133,7 @@ public class DatapackManager : MonoBehaviour
 						{
 							try
 							{
-								z = float.Parse(gcodeLine[i + 1]);
+								pos.y = float.Parse(gcodeLine[i + 1]);
 							}
 							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
 						}
@@ -132,17 +141,30 @@ public class DatapackManager : MonoBehaviour
 						{
 							try
 							{
-								f = float.Parse(gcodeLine[i + 1]);
+								f = Mathf.Clamp(float.Parse(gcodeLine[i + 1]) * _magnitudeScalar, 0, _maxMagnitude);
+							}
+							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
+						}
+						else if (upperTerm == "E")
+						{
+							try
+							{
+								float extrudeAmount = float.Parse(gcodeLine[i + 1]);
+								extrude = extrudeAmount > 0;
 							}
 							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
 						}
 					}
 				}
-
 				// If we made it here we know something should have changed so make it a new Mcode line
-				newMcodeData.data.Add(new McodeLine(x, y, z, f));
+				newMcodeData.data.Add(new McodeLine(pos, f, extrude));
 			}
 		}
+
+		newMcodeData.CalculateMotionVectors();
+		// Calculate the motion vectors here
+
+
 		return newMcodeData;
 	}
 
@@ -185,7 +207,7 @@ public class DatapackManager : MonoBehaviour
 	{
 		if(Directory.Exists(folderPath))
 		{
-			string[] files = SafeFileManagement.GetFilesPaths(folderPath, _numberOfRetries);
+			string[] files = SafeFileManagement.GetFilesPaths(folderPath, _numberOfIORetryAttempts);
 			foreach (string file in files)
 			{
 				print("Updating: " + file);
@@ -227,11 +249,11 @@ public class DatapackManager : MonoBehaviour
 		_printFunctions = Path.Combine(_dataFolderPath, "print", "functions");
 		string templateStart = Path.Combine(_printFunctions, c_TemplateNamespace + c_StartFunctionSuffix + c_McFunction);
 		_datapackStart = Path.Combine(_printFunctions, _datapackUUID + c_StartFunctionSuffix + c_McFunction);
-		if(SafeFileManagement.MoveFile(templateStart, _datapackStart, _numberOfRetries))
+		if(SafeFileManagement.MoveFile(templateStart, _datapackStart, _numberOfIORetryAttempts))
 		{
 			string templateStop = Path.Combine(_printFunctions, c_TemplateNamespace + c_StopFunctionSuffix + c_McFunction);
 			_datapackStop = Path.Combine(_printFunctions, _datapackUUID + c_StopFunctionSuffix + c_McFunction);
-			SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfRetries);
+			SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfIORetryAttempts);
 		}
 	}
 
@@ -240,18 +262,18 @@ public class DatapackManager : MonoBehaviour
 	/// </summary>
 	private void CopyTemplateAndRename()
 	{
-		SafeFileManagement.DirectoryCopy(_templateCopy, _outputRoot, true, _excludeExtensions, _numberOfRetries);
+		SafeFileManagement.DirectoryCopy(_pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, _numberOfIORetryAttempts);
 
 		// Rename main datapack folder
 		string templateOutput = Path.Combine(_outputRoot, c_TemplateName);
 		_datapackRootPath = Path.Combine(_outputRoot, _datapackName);
-		if(SafeFileManagement.MoveDirectory(templateOutput, _datapackRootPath, _numberOfRetries))
+		if(SafeFileManagement.MoveDirectory(templateOutput, _datapackRootPath, _numberOfIORetryAttempts))
 		{
 			// Rename namespace folder
 			_dataFolderPath = Path.Combine(_datapackRootPath, c_Data);
 			string templateNamespace = Path.Combine(_dataFolderPath, c_TemplateNamespace);
 			_namespacePath = Path.Combine(_dataFolderPath, _datapackUUID);
-			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, _numberOfRetries);
+			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, _numberOfIORetryAttempts);
 
 			_namespaceFunctions = Path.Combine(_namespacePath, c_Functions);
 			_datapackMcFuncTags = Path.Combine(_dataFolderPath, c_Minecraft, c_Tags, c_Functions);

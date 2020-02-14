@@ -7,10 +7,9 @@ using UnityEngine;
 /// </summary>
 public class McodeLine
 {
-	public float x = 0;	// X position
-	public float y = 0;	// Y position
-	public float z = 0;	// Z position
-	public float magnitude = 0;	// Feedrate and acceleration control (magnitude that motion vector should have
+	public Vector3 pos = new Vector3();
+	public float magnitude = 1; // Feedrate and acceleration control (magnitude that motion vector should have
+	public bool extrude = false;
 	public float errorRadius = 0;   // Minecraft lag detection/prevention/catching
 	public Vector3 motion = new Vector3();     // Motion of arm moving to x,y,z cord
 
@@ -19,13 +18,12 @@ public class McodeLine
 
 	}
 
-	public McodeLine(float inX, float inY, float inZ, float inMagnitude)
+	public McodeLine(Vector3 inPos, float inMagnitude, bool inExtrude)
 	{
-		x = inX;
-		y = inY;
-		z = inZ;
+		pos = inPos;
 		magnitude = inMagnitude;
 		errorRadius = magnitude;
+		extrude = inExtrude;
 	}
 
 	/// <summary>
@@ -34,7 +32,10 @@ public class McodeLine
 	/// <returns>class varibles as a concatinated string</returns>
 	public string AsString()
 	{
-		return "X: " + x.ToString() + " Y: " + y.ToString() + " Z: " + z.ToString() + " mag: " + magnitude.ToString() + " motion: " + motion.ToString();
+		return "pos: " + pos.ToString("F3") +
+				" mag: " + magnitude.ToString() +
+				" motion: " + motion.ToString("F3") +
+				" extrude: " + extrude;
 	}
 
 }
