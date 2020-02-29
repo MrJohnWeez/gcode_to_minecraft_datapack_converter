@@ -1,0 +1,1 @@
+execute if score #fakePlayerVar gp_ArgVar002 matches LINENUM as @s run execute at @e[type=armor_stand,tag=TagHome,limit=1] run tp @e[type=minecraft:armor_stand,limit=1,tag=TagNode] ~XNUM ~YNUM ~ZNUM
