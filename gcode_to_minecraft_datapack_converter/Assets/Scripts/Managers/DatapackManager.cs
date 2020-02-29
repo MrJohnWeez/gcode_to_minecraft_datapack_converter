@@ -40,6 +40,7 @@ public class DatapackManager : MonoBehaviour
 	// String Constants
 	private const string c_StartFunctionSuffix = "_start";
 	private const string c_StopFunctionSuffix = "_stop";
+	private const string c_PauseFunctionSuffix = "_pause";
 	private const string c_ScoreboardPrefix = "gp_";
 	private const string c_Line = "line";
 	private const string c_MainDatapackName = "GcodePrinter";
@@ -95,6 +96,7 @@ public class DatapackManager : MonoBehaviour
 	private string _printFunctions = "";    // PrintFunction folder within datapack ---------- datapack/data/print/functions
 	private string _datapackStart = "";     // File name of mcode printing start function ---- datapack/data/print/functions/start.mcfunction
 	private string _datapackStop = "";      // File name of mcode printing stop function ----- datapack/data/print/functions/stop.mcfunction
+	private string _datapackPause = "";     // File name of mcode printing poause function --- datapack/data/print/functions/pause.mcfunction
 	private string _datapackMcFuncTags = "";// File path for --------------------------------- datapack/data/minecraft/tags/functions
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
@@ -325,7 +327,7 @@ public class DatapackManager : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Rename the start and stop files
+	/// Rename the start, pause, and stop files
 	/// </summary>
 	private void RenameFiles()
 	{
@@ -336,7 +338,12 @@ public class DatapackManager : MonoBehaviour
 		{
 			string templateStop = Path.Combine(_printFunctions, C_TemplateNamespace + c_StopFunctionSuffix + c_McFunction);
 			_datapackStop = Path.Combine(_printFunctions, _datapackUUID + c_StopFunctionSuffix + c_McFunction);
-			SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfIORetryAttempts);
+			if(SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfIORetryAttempts))
+			{
+				string templatePause = Path.Combine(_printFunctions, C_TemplateNamespace + c_PauseFunctionSuffix + c_McFunction);
+				_datapackPause = Path.Combine(_printFunctions, _datapackUUID + c_PauseFunctionSuffix + c_McFunction);
+				SafeFileManagement.MoveFile(templatePause, _datapackPause, _numberOfIORetryAttempts);
+			}
 		}
 	}
 

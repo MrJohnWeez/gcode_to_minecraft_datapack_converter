@@ -6,6 +6,9 @@ scoreboard players set #fakePlayerVar gp_ArgVar001 1
 scoreboard objectives add gp_ArgVar002 dummy
 scoreboard players set #fakePlayerVar gp_ArgVar002 0
 
+scoreboard objectives add gp_ArgVar003 dummy
+scoreboard players set #fakePlayerVar gp_ArgVar003 0
+
 scoreboard objectives setdisplay sidebar gp_ArgVar002
 
 kill @e[type=minecraft:armor_stand,tag=PrinterArmor]
