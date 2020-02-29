@@ -5,14 +5,35 @@ using System.IO;
 using System;
 using SFB;
 
+
+
+
+
+
+// Need to make a wrapper class that allows update and execution since max command limit is 65,536 per function
+// for a total of 65,536 * 65,536 = 4,294,967,296 will be the gcode commands limit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /// <summary>
 /// Manager responsible for creating all files that make up the Minecraft datapack
 /// </summary>
 public class DatapackManager : MonoBehaviour
 {
 	// Mcode properties
-	private float _magnitudeScalar = 0.0002f;
-	private float _maxMagnitude = 0.5f;
+	private float _magnitudeScalar = 0.002f;
+	private float _maxMagnitude = 0.4f;
 
 	private const int _numberOfIORetryAttempts = 5;
 
@@ -143,6 +164,14 @@ public class DatapackManager : MonoBehaviour
 		// Save strings to files
 		SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_ExecuteMcode), executeLineString);
 		SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine), updateCodeString);
+
+		
+		// Clean up datapack folder templates
+		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateLineWithFill));
+		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateLineNoFill));
+		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
+		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
+
 	}
 
 
@@ -340,7 +369,7 @@ public class DatapackManager : MonoBehaviour
 	private void SetUpVaribleNames()
 	{
 		_gcodeFilePath = _fileManager.GetGcodeFilePath();
-		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(_gcodeFilePath));
+		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(_gcodeFilePath)).ToLower();
 		_dateCreated = SafeFileManagement.GetDateNow();
 		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 		_datapackName = c_MainDatapackName + "_" + _datapackUUID;

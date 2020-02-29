@@ -7,11 +7,6 @@ using UnityEngine;
 /// </summary>
 public static class McodeDataExtensions
 {
-	
-
-	
-
-
 	/// <summary>
 	/// Logs the entire mcodeData varible to console
 	/// </summary>

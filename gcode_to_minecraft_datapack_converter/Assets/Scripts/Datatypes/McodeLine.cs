@@ -33,8 +33,8 @@ public class McodeLine
 	public string AsString()
 	{
 		return "pos: " + pos.ToString("F3") +
-				" mag: " + magnitude.ToString() +
 				" motion: " + motion.ToString("F3") +
+				" mag: " + magnitude.ToString() +
 				" extrude: " + extrude;
 	}
 

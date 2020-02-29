@@ -9,21 +9,20 @@ public class McodeData
 {
 	public List<McodeLine> data = new List<McodeLine>();
 	
-
+	/// <summary>
+	/// Calculate the motion velocity that moves the armor stand to the next node
+	/// </summary>
 	public void CalculateMotionVectors()
 	{
-		if (data.Count == 0)
-			return;
-
 		if (data.Count > 1)
 		{
-			for (int i = 0; i < data.Count - 1; i++)
+			for (int i = 0; i < data.Count; i++)
 			{
-				Vector3 newMotion = data[i + 1].pos - data[i].pos;
+				// Calculate the motion that is needed to get to the current point
+				Vector3 prevVector = i == 0 ? Vector3.zero : data[i-1].pos;
+				Vector3 newMotion = data[i].pos - prevVector;
 				data[i].motion = newMotion.normalized * data[i].magnitude;
 			}
-
-			data[data.Count - 1].motion = Vector3.zero;
 		}
 	}
 
