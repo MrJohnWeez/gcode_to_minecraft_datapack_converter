@@ -13,6 +13,18 @@ using UnityEngine;
 public class SafeFileManagement
 {
 	/// <summary>
+	/// Deletes a file and returns wether it was successful or not
+	/// </summary>
+	/// <param name="path"></param>
+	/// <returns></returns>
+	public static bool DeleteFile(string path)
+	{
+		File.Delete(path);
+		return !File.Exists(path);
+	}
+
+
+	/// <summary>
 	/// Loads entire file into memory then displays it on the given tmp text object.
 	/// </summary>
 	/// <param name="path">The path of the file to read</param>
