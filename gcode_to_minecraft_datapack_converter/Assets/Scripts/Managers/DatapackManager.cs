@@ -6,17 +6,8 @@ using System;
 using SFB;
 
 
-
-
-
-
-// Need to make a wrapper class that allows update and execution since max command limit is 65,536 per function
-// for a total of 65,536 * 65,536 = 4,294,967,296 will be the gcode commands limit
-
-
-
-
-
+// Need to adjust what line numbers are being used
+// Unity shows different line number and motion value then the line in the datapack
 
 
 
@@ -44,6 +35,8 @@ public class DatapackManager : MonoBehaviour
 	private const string c_ScoreboardPrefix = "gp_";
 	private const string c_Line = "line";
 	private const string c_MainDatapackName = "GcodePrinter";
+	private const string C_UpdateCodeLineName = "update_code_line";
+	private const string C_ExecuteMcodeName = "execute_mcode";
 
 	// Template file names
 	private const string C_UpdateCodeLine = "update_code_line.mcfunction";
@@ -53,6 +46,7 @@ public class DatapackManager : MonoBehaviour
 	private const string C_TemplateLineWithFill = "template_line_with_fill.mcfunction";
 	private const string C_TemplateUpdateCode = "template_update_code.mcfunction";
 	private const string C_TemplateExecuteLine = "template_execute_line.mcfunction";
+	private const string C_TemplateFinishedLine = "template_finished_code.mcfunction";
 
 	// Template constants
 	private const string C_FillBlock = "FILLBLOCK";
@@ -73,6 +67,7 @@ public class DatapackManager : MonoBehaviour
 	private const string c_McFunction = ".mcfunction";
 	private const string c_Tags = "tags";
 	private const string c_FakePlayerChar = "#";
+	private const string C_Slash = "/";
 
 	[SerializeField] private FileManager _fileManager = null;
 
@@ -120,7 +115,7 @@ public class DatapackManager : MonoBehaviour
 			RenameFiles();
 			UpdateCopiedFiles();
 			_mcodeData = ConvertToMcodeData(_fileManager.GetParsedGcodeLines());
-			//_mcodeData.Log();
+			_mcodeData.Log();
 			WriteMinecraftCodeFiles();
 			print("Finished!");
 		}
@@ -133,47 +128,116 @@ public class DatapackManager : MonoBehaviour
 		string templateLineNoFill = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateLineNoFill));
 		string templateUpdateCode = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
 		string templateExecuteLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
+		string templateFinishedLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateFinishedLine));
 
-		string executeLineString = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_ExecuteMcode));
-		string updateCodeString = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine));
+		int factor = 1000;
+		int factorPow2 = factor * factor;
+		int facotrPow3 = factorPow2 * factor;
+		int lineAmount = _mcodeData.data.Count + 1;
 
-		// Generates all the data from the gcode file into minecraft datapack mcfunctions
-		// using the templates within the template datapack folder
-		for (int lineNumber = 0; lineNumber < _mcodeData.data.Count; lineNumber++)
+		string lvl1Folder = "level1code0_" + (facotrPow3 - 1);
+		string lvl1Root = Path.Combine(_namespaceFunctions, lvl1Folder);
+		Directory.CreateDirectory(lvl1Root);
+
+		string lvl1ExecuteCode = "";
+		string lvl1UpdateCode = "";
+
+		for (int lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
 		{
-			string currentExecute = templateExecuteLine;
-			currentExecute = currentExecute.Replace(C_LineNum_1, (lineNumber + 1).ToString());
-			currentExecute = currentExecute.Replace(C_LineNum, c_Line + (lineNumber + 2).ToString());
-			executeLineString += currentExecute;
+			string lvl2Folder = "level2code" + lvl1 + "_" + (lvl1 + factorPow2 - 1);
+			string lvl2Root = Path.Combine(lvl1Root, lvl2Folder);
+			Directory.CreateDirectory(lvl2Root);
 
-			string currentUpdateCode = templateUpdateCode;
-			currentUpdateCode = currentUpdateCode.Replace(C_LineNum, (lineNumber + 1).ToString());
-			Vector3 posData = _mcodeData.data[lineNumber].pos;
-			currentUpdateCode = currentUpdateCode.Replace(C_XNum, posData.x.ToString("F10"));
-			currentUpdateCode = currentUpdateCode.Replace(C_YNum, posData.y.ToString("F10"));
-			currentUpdateCode = currentUpdateCode.Replace(C_ZNum, posData.z.ToString("F10"));
-			updateCodeString += currentUpdateCode;
+			string lvl2ExecuteCode = "";
+			string lvl2UpdateCode = "";
 
-			string currentLineNum = _mcodeData.data[lineNumber].extrude ? templateLineFill : templateLineNoFill;
-			Vector3 motionData = _mcodeData.data[lineNumber].motion;
-			currentLineNum = currentLineNum.Replace(C_XNum, motionData.x.ToString("F10"));
-			currentLineNum = currentLineNum.Replace(C_YNum, motionData.y.ToString("F10"));
-			currentLineNum = currentLineNum.Replace(C_ZNum, motionData.z.ToString("F10"));
-			currentLineNum = currentLineNum.Replace(C_FillBlock, "stone");
-			SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, c_Line + (lineNumber + 2).ToString() + c_McFunction), currentLineNum);
+			string lvl1CurrentExecute = templateExecuteLine;
+			lvl1CurrentExecute = lvl1CurrentExecute.Replace(C_LineNum_1, lvl1 + ".." + (lvl1 + factorPow2 - 1));
+			lvl1CurrentExecute = lvl1CurrentExecute.Replace(C_LineNum, DatapackPath(lvl1Folder, lvl2Folder, C_ExecuteMcodeName));
+			lvl1ExecuteCode += lvl1CurrentExecute;
+
+			string lvl1CurrentUpdateCode = templateExecuteLine;
+			lvl1CurrentUpdateCode = lvl1CurrentUpdateCode.Replace(C_LineNum_1, (lvl1) + ".." + (lvl1 + factorPow2));
+			lvl1CurrentUpdateCode = lvl1CurrentUpdateCode.Replace(C_LineNum, DatapackPath(lvl1Folder, lvl2Folder, C_UpdateCodeLineName));
+			lvl1UpdateCode += lvl1CurrentUpdateCode;
+
+			for (int lvl2 = lvl1; lvl2 < lvl1 + 1 * factorPow2 && lvl2 < lineAmount; lvl2 += factor)
+			{
+				string lvl3ExecuteCode = "";
+				string lvl3UpdateCode = "";
+
+				string lvl3Folder = "level3code" + lvl2 + "_" + (lvl2 + factor - 1);
+				string lvl3Root = Path.Combine(lvl2Root, lvl3Folder);
+				string localFolderRoot = DatapackPath(lvl1Folder, lvl2Folder, lvl3Folder);
+
+				Directory.CreateDirectory(lvl3Root);
+
+				string lvl2CurrentExecute = templateExecuteLine;
+				lvl2CurrentExecute = lvl2CurrentExecute.Replace(C_LineNum_1, lvl2 + ".." + (lvl2 + factor - 1));
+				lvl2CurrentExecute = lvl2CurrentExecute.Replace(C_LineNum, DatapackPath(localFolderRoot, C_ExecuteMcodeName));
+				lvl2ExecuteCode += lvl2CurrentExecute;
+
+				string lvl2CurrentUpdateCode = templateExecuteLine;
+				lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum_1, (lvl2) + ".." + (lvl2 + factor));
+				lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum, DatapackPath(localFolderRoot, C_UpdateCodeLineName));
+				lvl2UpdateCode += lvl2CurrentUpdateCode;
+
+				for (int lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
+				{
+					string filePath = Path.Combine(lvl3Root, c_Line + lvl3 + c_McFunction);
+					string currentLineCode;
+					
+					// Make sure to add special ending line when the last line is written
+					if (lvl3 != lineAmount - 1)
+					{
+						currentLineCode = _mcodeData.data[lvl3].extrude ? templateLineFill : templateLineNoFill;
+						Vector3 motionData = _mcodeData.data[lvl3].motion;
+						currentLineCode = currentLineCode.Replace(C_XNum, motionData.x.ToString("F10"));
+						currentLineCode = currentLineCode.Replace(C_YNum, motionData.y.ToString("F10"));
+						currentLineCode = currentLineCode.Replace(C_ZNum, motionData.z.ToString("F10"));
+						currentLineCode = currentLineCode.Replace(C_FillBlock, "stone");
+
+						string currentUpdateCode = templateUpdateCode;
+						currentUpdateCode = currentUpdateCode.Replace(C_LineNum, (lvl3).ToString());
+						Vector3 posData = _mcodeData.data[lvl3].pos;
+						currentUpdateCode = currentUpdateCode.Replace(C_XNum, posData.x.ToString("F10"));
+						currentUpdateCode = currentUpdateCode.Replace(C_YNum, posData.y.ToString("F10"));
+						currentUpdateCode = currentUpdateCode.Replace(C_ZNum, posData.z.ToString("F10"));
+						lvl3UpdateCode += currentUpdateCode;
+					}
+					else
+					{
+						currentLineCode = templateFinishedLine;
+					}
+
+					SafeFileManagement.SetFileContents(filePath, currentLineCode);
+
+					string currentExecute = templateExecuteLine;
+					currentExecute = currentExecute.Replace(C_LineNum_1, (lvl3).ToString());
+					currentExecute = currentExecute.Replace(C_LineNum, DatapackPath(localFolderRoot, c_Line + (lvl3)));
+					lvl3ExecuteCode += currentExecute;
+				}
+
+				// Save strings to files
+				SafeFileManagement.SetFileContents(Path.Combine(lvl3Root, C_ExecuteMcode), lvl3ExecuteCode);
+				SafeFileManagement.SetFileContents(Path.Combine(lvl3Root, C_UpdateCodeLine), lvl3UpdateCode);
+			}
+
+			// Save strings to files
+			SafeFileManagement.SetFileContents(Path.Combine(lvl2Root, C_ExecuteMcode), lvl2ExecuteCode);
+			SafeFileManagement.SetFileContents(Path.Combine(lvl2Root, C_UpdateCodeLine), lvl2UpdateCode);
+
 		}
 
 		// Save strings to files
-		SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_ExecuteMcode), executeLineString);
-		SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine), updateCodeString);
+		SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_ExecuteMcode), lvl1ExecuteCode);
+		SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine), lvl1UpdateCode);
 
-		
 		// Clean up datapack folder templates
 		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateLineWithFill));
 		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateLineNoFill));
 		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
 		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
-
 	}
 
 
@@ -385,6 +449,20 @@ public class DatapackManager : MonoBehaviour
 		LogDynamicVars();
 	}
 
+	private string DatapackPath(params string[] values)
+	{
+		if (values.Length < 2)
+			return values[0];
+
+		string newString = "";
+		foreach(string part in values)
+		{
+			newString += part + C_Slash;
+		}
+
+		return newString.TrimEnd(newString[newString.Length - 1]);
+
+	}
 	/// <summary>
 	/// Prints all vars to unity console
 	/// </summary>
