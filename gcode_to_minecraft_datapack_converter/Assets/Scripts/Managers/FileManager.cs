@@ -14,7 +14,7 @@ public class FileManager : MonoBehaviour
 	[SerializeField] private TMP_Text _gcodeDisplay = null;
 	[SerializeField] private TMP_Text _filePathDisplay = null;
 
-	private GcodeManager _gocdeManager = new GcodeManager();
+	//private GcodeManager _gocdeManager = new GcodeManager();
 	private List<List<string>> _parsedGcode = new List<List<string>>();
 	private static string[] _gcodeLines = null;
 	private string _gcodePath = "";
@@ -36,8 +36,10 @@ public class FileManager : MonoBehaviour
 
 		if(!string.IsNullOrEmpty(_gcodePath))
 		{
-			_gcodeLines = SafeFileManagement.DisplayFile(_gcodePath, _gcodeDisplay);
-			_parsedGcode = _gocdeManager.ParseGcodeFile(_gcodeLines);
+			//_gcodeLines = SafeFileManagement.DisplayFile(_gcodePath, _gcodeDisplay);
+			//_parsedGcode = _gocdeManager.ParseGcodeFile(_gcodeLines);
+			string outputPath = GcodeManager.GcodeToParsedPaddedCSV(_gcodePath);
+			print(outputPath);
 		}
 		else
 			_gcodeDisplay.text = _instructions;

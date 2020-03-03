@@ -6,12 +6,27 @@ using System;
 using SFB;
 
 
-// Need to adjust what line numbers are being used
-// Unity shows different line number and motion value then the line in the datapack
 
 
+// New pipeline:
+// Gcode -> Parsed padded CSV -> mcode CSV -> Datapack
 
+// Gcode:
+//		;This is a gcode comment
+//		G1 X5 Y5 Z0 E-0.2 F900; wipe and retract
+//		G1 X5 Y200 E0.14 ; perimeter
+//		G1 X5 Y200 Z5 E-0.14 ; perimeter
 
+// Parsed padded CSV:  Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed
+//		5,0,5,-0.2,900
+//		5,0,200,0.14,900
+//		5,5,200,-0.14,900
+
+// mcode CSV:   Xcord,Ycord,Zcord,XMotion,YMotion,ZMotion,ShouldExtrude
+//		0,0,0,0,0,0,0
+//		5,0,5,0.7071068,0,0.7071068,0
+//		5,0,200,0,0,1,1
+//		5,5,200,0,1,0,0
 
 
 
@@ -24,7 +39,7 @@ public class DatapackManager : MonoBehaviour
 {
 	// Mcode properties
 	private float _magnitudeScalar = 0.002f;
-	private float _maxMagnitude = 0.4f;
+	private float _maxMagnitude = 1f;
 
 	private const int _numberOfIORetryAttempts = 5;
 
@@ -116,9 +131,31 @@ public class DatapackManager : MonoBehaviour
 			UpdateCopiedFiles();
 			_mcodeData = ConvertToMcodeData(_fileManager.GetParsedGcodeLines());
 			_mcodeData.Log();
+			string writtenCSV = ParseGcodeToCSV();
+			print("Wrote CSV to: " + writtenCSV);
+
 			WriteMinecraftCodeFiles();
 			print("Finished!");
 		}
+	}
+
+	private string ParseGcodeToCSV()
+	{
+		string csvName = "ParsedGcode" + SafeFileManagement.GetDateNow() + ".csv";
+		string tempPath = Path.Combine(Application.temporaryCachePath, csvName);
+		try
+		{
+			using (var sw = new StreamWriter(tempPath))
+			{
+
+				//sw.WriteLine(i);
+			}
+		}
+		catch (Exception e)
+		{
+			Debug.Log("The file could not be written to:\nError: \n" + e.Message.ToString());
+		}
+		return tempPath;
 	}
 
 	private void WriteMinecraftCodeFiles()
@@ -248,7 +285,7 @@ public class DatapackManager : MonoBehaviour
 		float f = 0;
 		bool extrude = false;
 
-		// Add starting value
+		// Add starting value at 0 0 0
 		newMcodeData.data.Add(new McodeLine());
 
 		foreach (List<string> gcodeLine in parsedGcode)
