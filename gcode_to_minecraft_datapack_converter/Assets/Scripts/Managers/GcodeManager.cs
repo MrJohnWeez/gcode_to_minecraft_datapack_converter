@@ -4,31 +4,64 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
+
+
+
+
+
+// Not sure what is happening but the 2nd csv file is not working
+
+
+
+
+
+
+
+
 /// <summary>
 /// Parse gcode using this static class
 /// </summary>
 public static class GcodeManager
 {
-	/// <summary>
-	/// Datatype used to track the previous updated gcode term
-	/// </summary>
-	public struct LastGcodeValues
+	public static string ParsedPaddedCSVToMcodeCSV(string parsedPaddedCSVPath, in ParsedDataStats dataStats)
 	{
-		public string x;
-		public string y;
-		public string z;
-		public string shouldExtrude;
-		public string moveSpeed;
-
-		/// <summary>
-		/// Convert this struct to a string as a csv
-		/// TODO: Use stringbuilder if this struct gets bigger
-		/// </summary>
-		/// <returns>string as a csv</returns>
-		public string ToCSVString()
+		string mcodePath = "";
+		string csvName = "ParsedPaddedCSVToMcodeCSV_" + SafeFileManagement.GetDateNow() + ".csv";
+		mcodePath = Path.Combine(Application.temporaryCachePath, csvName);
+		if (File.Exists(parsedPaddedCSVPath))
 		{
-			return x + "," + y + "," + z + "," + shouldExtrude + "," + moveSpeed + ",";
+			try
+			{
+				using (var mcodeFile = new StreamWriter(mcodePath))
+				{
+					mcodeFile.WriteLine("Xcord,Ycord,Zcord,XMotion,YMotion,ZMotion,ShouldExtrude");
+					try
+					{
+						using (var paddedCSVFile = new StreamReader(parsedPaddedCSVPath))
+						{
+							string currentLine = "";
+							paddedCSVFile.ReadLine();   // Skip header
+							LastGcodeValues prevData = null;
+							LastGcodeValues currData = null;
+							while (!paddedCSVFile.EndOfStream)
+							{
+								currentLine = paddedCSVFile.ReadLine();
+								currData = new LastGcodeValues(currentLine);
+
+								McodeValues mcodeVals = new McodeValues(prevData, currData, dataStats.maxSpeed);
+								prevData = currData;
+								mcodeFile.WriteLine(mcodeVals.ToCSVString());
+							}
+						}
+					}
+					catch (Exception e)
+					{ LogError("The gcode file could not be written to", e); }
+				}
+			}
+			catch (Exception e)
+			{ LogError("The csv file could not be written to", e); }
 		}
+		return mcodePath;
 	}
 
 	/// <summary>
@@ -36,28 +69,26 @@ public static class GcodeManager
 	/// </summary>
 	/// <param name="gcodePath">path to the gcode file to parse</param>
 	/// <returns>path to the created csv file</returns>
-	public static string GcodeToParsedPaddedCSV(string gcodePath)
+	public static string GcodeToParsedPaddedCSV(string gcodePath, ref ParsedDataStats dataStats)
 	{
-		string tempPath = "";
+		string parsedPaddedCSVPath = "";
 		string csvName = "GcodeToParsedPaddedCSV_" + SafeFileManagement.GetDateNow() + ".csv";
-		tempPath = Path.Combine(Application.temporaryCachePath, csvName);
+		parsedPaddedCSVPath = Path.Combine(Application.temporaryCachePath, csvName);
 		if (File.Exists(gcodePath))
 		{
 			try
 			{
-				using (var csvFile = new StreamWriter(tempPath))
+				using (var csvFile = new StreamWriter(parsedPaddedCSVPath))
 				{
-					csvFile.WriteLine("x,y,z,extrude,movespeed");
+					csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");
 					try
 					{
 						using (var gcodeFile = new StreamReader(gcodePath))
 						{
 							LastGcodeValues lastValues = new LastGcodeValues();
-							lastValues.x = "0";
-							lastValues.y = "0";
-							lastValues.z = "0";
-							lastValues.shouldExtrude = "0";
-							lastValues.moveSpeed = "0";
+							lastValues.pos = Vector3.zero;
+							lastValues.exturedAmount = 0;
+							lastValues.moveSpeed = 0;
 
 							string currentLine = "";
 							while (!gcodeFile.EndOfStream)
@@ -66,25 +97,21 @@ public static class GcodeManager
 								currentLine = RemoveNonGcode(currentLine);
 								if (!string.IsNullOrWhiteSpace(currentLine))
 								{
-									csvFile.WriteLine(GcodeLineToCSVLine(currentLine, ref lastValues));
+									csvFile.WriteLine(GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats));
 								}
 							}
 						}
 					}
 					catch (Exception e)
-					{
-						Debug.Log("The gcode file could not be written to:\nError: \n" + e.Message.ToString());
-					}
+					{ LogError("The gcode file could not be written to", e); }
 
 				}
 			}
 			catch (Exception e)
-			{
-				Debug.Log("The csv file could not be written to:\nError: \n" + e.Message.ToString());
-			}
+			{ LogError("The csv file could not be written to", e); }
 		}
 
-		return tempPath;
+		return parsedPaddedCSVPath;
 	}
 
 	/// <summary>
@@ -107,7 +134,7 @@ public static class GcodeManager
 	/// <param name="gcodeLine">gcode to convert</param>
 	/// <param name="lastValues">last gcode values that were converted</param>
 	/// <returns>gcode string as a csv string</returns>
-	private static string GcodeLineToCSVLine(string gcodeLine, ref LastGcodeValues lastValues)
+	private static string GcodeLineToCSVLine(string gcodeLine, ref LastGcodeValues lastValues, ref ParsedDataStats stats)
 	{
 		string parsed = "";
 		string[] sections = gcodeLine.Split(' ');
@@ -130,28 +157,45 @@ public static class GcodeManager
 						switch (termTrimmed[0])
 						{
 							case 'X':
-								lastValues.x = stringValue;
+								lastValues.pos.x = float.Parse(stringValue);
 								break;
 							case 'Y':
-								lastValues.z = stringValue;
+								lastValues.pos.z = float.Parse(stringValue);
 								break;
 							case 'Z':
-								lastValues.y = stringValue;
+								lastValues.pos.y = float.Parse(stringValue);
 								break;
 							case 'E':
-								lastValues.shouldExtrude = stringValue;
+								lastValues.exturedAmount = float.Parse(stringValue);
 								break;
 							case 'F':
-								lastValues.moveSpeed = stringValue;
+								lastValues.moveSpeed = float.Parse(stringValue);
 								break;
-
 						}
 					}
 				}
+				stats.minExtrude = Mathf.Min(stats.minExtrude, lastValues.exturedAmount);
+				stats.minSpeed = Mathf.Min(stats.minSpeed, lastValues.moveSpeed);
+				stats.minPos.x = Mathf.Min(stats.minPos.x, lastValues.pos.x);
+				stats.minPos.y = Mathf.Min(stats.minPos.y, lastValues.pos.y);
+				stats.minPos.z = Mathf.Min(stats.minPos.z, lastValues.pos.z);
+
+				stats.maxExtrude = Mathf.Min(stats.maxExtrude, lastValues.exturedAmount);
+				stats.maxSpeed = Mathf.Min(stats.maxSpeed, lastValues.moveSpeed);
+				stats.maxPos.x = Mathf.Min(stats.maxPos.x, lastValues.pos.x);
+				stats.maxPos.y = Mathf.Min(stats.maxPos.y, lastValues.pos.y);
+				stats.maxPos.z = Mathf.Min(stats.maxPos.z, lastValues.pos.z);
+
 				parsed = lastValues.ToCSVString();
 			}
 		}
 
 		return parsed;
+	}
+
+
+	private static void LogError(string text, Exception error)
+	{
+		Debug.Log("Error\n" + text + "\n" + error.Message);
 	}
 }

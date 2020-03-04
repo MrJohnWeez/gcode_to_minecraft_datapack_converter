@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SFB;
 using TMPro;
-
+using System.IO;
 /// <summary>
 /// Handles gcode management
 /// </summary>
@@ -38,8 +38,11 @@ public class FileManager : MonoBehaviour
 		{
 			//_gcodeLines = SafeFileManagement.DisplayFile(_gcodePath, _gcodeDisplay);
 			//_parsedGcode = _gocdeManager.ParseGcodeFile(_gcodeLines);
-			string outputPath = GcodeManager.GcodeToParsedPaddedCSV(_gcodePath);
-			print(outputPath);
+			ParsedDataStats dataStats = new ParsedDataStats();
+			string outputPath = GcodeManager.GcodeToParsedPaddedCSV(_gcodePath, ref dataStats);
+			string mcodeCSV = GcodeManager.ParsedPaddedCSVToMcodeCSV(outputPath, dataStats);
+			print(mcodeCSV);
+			//File.Delete(outputPath);
 		}
 		else
 			_gcodeDisplay.text = _instructions;
