@@ -4,25 +4,12 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-
-
-
-
-
-// Not sure what is happening but the 2nd csv file is not working
-
-
-
-
-
-
-
-
 /// <summary>
 /// Parse gcode using this static class
 /// </summary>
 public static class GcodeManager
 {
+	#region PublicMembers
 	public static string ParsedPaddedCSVToMcodeCSV(string parsedPaddedCSVPath, in ParsedDataStats dataStats)
 	{
 		string mcodePath = "";
@@ -41,8 +28,9 @@ public static class GcodeManager
 						{
 							string currentLine = "";
 							paddedCSVFile.ReadLine();   // Skip header
-							LastGcodeValues prevData = null;
-							LastGcodeValues currData = null;
+
+							LastGcodeValues prevData = new LastGcodeValues();
+							LastGcodeValues currData = new LastGcodeValues();
 
 							// Add orgin as first value
 							McodeValues mcodeVals = new McodeValues();
@@ -119,7 +107,9 @@ public static class GcodeManager
 
 		return parsedPaddedCSVPath;
 	}
+	#endregion PublicMembers
 
+	#region PrivateMembers
 	/// <summary>
 	/// Removes all comments, empty lines from a string
 	/// </summary>
@@ -203,6 +193,8 @@ public static class GcodeManager
 
 	private static void LogError(string text, Exception error)
 	{
-		Debug.Log("Error\n" + text + "\n" + error.Message);
+		Debug.LogError("Error\n" + text + "\n" + error.Message);
 	}
+
+	#endregion PrivateMembers
 }

@@ -7,9 +7,9 @@ using UnityEngine;
 /// </summary>
 public class McodeValues
 {
-	Vector3 pos = new Vector3();
-	Vector3 motion = new Vector3();
-	bool shouldExtrude = false;
+	public Vector3 pos = new Vector3();
+	public Vector3 motion = new Vector3();
+	public bool shouldExtrude = false;
 
 	public McodeValues()
 	{
@@ -43,22 +43,18 @@ public class McodeValues
 		}
 	}
 
-
-
-	// This is where I left off
-
-
-
 	public McodeValues(string mcodeAsCSVstring)
 	{
-		string[] sections = lastGcodeValuesAsCSV.Split(',');
-		if (sections.Length >= 5)
+		string[] sections = mcodeAsCSVstring.Split(',');
+		if (sections.Length >= 7)
 		{
 			pos.x = float.Parse(sections[0]);
 			pos.y = float.Parse(sections[1]);
 			pos.z = float.Parse(sections[2]);
-			exturedAmount = float.Parse(sections[3]);
-			moveSpeed = float.Parse(sections[4]);
+			motion.x = float.Parse(sections[3]);
+			motion.y = float.Parse(sections[4]);
+			motion.z = float.Parse(sections[5]);
+			shouldExtrude = sections[6] == "1";
 		}
 	}
 
