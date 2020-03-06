@@ -10,21 +10,20 @@ using UnityEngine;
 public static class GcodeManager
 {
 	#region PublicMembers
-	public static string ParsedPaddedCSVToMcodeCSV(string parsedPaddedCSVPath, in ParsedDataStats dataStats)
+	public static bool ParsedPaddedCSVToMcodeCSV(ref ParsedDataStats dataStats)
 	{
-		string mcodePath = "";
 		string csvName = "ParsedPaddedCSVToMcodeCSV_" + SafeFileManagement.GetDateNow() + ".csv";
-		mcodePath = Path.Combine(Application.temporaryCachePath, csvName);
-		if (File.Exists(parsedPaddedCSVPath))
+		dataStats.mcodePath = Path.Combine(Application.temporaryCachePath, csvName);
+		if (File.Exists(dataStats.parsedGcodePath))
 		{
 			try
 			{
-				using (var mcodeFile = new StreamWriter(mcodePath))
+				using (var mcodeFile = new StreamWriter(dataStats.mcodePath))
 				{
 					mcodeFile.WriteLine("Xcord,Ycord,Zcord,XMotion,YMotion,ZMotion,ShouldExtrude");
 					try
 					{
-						using (var paddedCSVFile = new StreamReader(parsedPaddedCSVPath))
+						using (var paddedCSVFile = new StreamReader(dataStats.parsedGcodePath))
 						{
 							string currentLine = "";
 							paddedCSVFile.ReadLine();   // Skip header
@@ -46,6 +45,7 @@ public static class GcodeManager
 								prevData = currData;
 								mcodeFile.WriteLine(mcodeVals.ToCSVString());
 							}
+							return true;
 						}
 					}
 					catch (Exception e)
@@ -55,7 +55,7 @@ public static class GcodeManager
 			catch (Exception e)
 			{ LogError("The csv file could not be written to", e); }
 		}
-		return mcodePath;
+		return false;
 	}
 
 	/// <summary>
@@ -63,16 +63,15 @@ public static class GcodeManager
 	/// </summary>
 	/// <param name="gcodePath">path to the gcode file to parse</param>
 	/// <returns>path to the created csv file</returns>
-	public static string GcodeToParsedPaddedCSV(ref ParsedDataStats dataStats)
+	public static bool GcodeToParsedPaddedCSV(ref ParsedDataStats dataStats)
 	{
-		string parsedPaddedCSVPath = "";
 		string csvName = "GcodeToParsedPaddedCSV_" + SafeFileManagement.GetDateNow() + ".csv";
-		parsedPaddedCSVPath = Path.Combine(Application.temporaryCachePath, csvName);
+		dataStats.parsedGcodePath = Path.Combine(Application.temporaryCachePath, csvName);
 		if (File.Exists(dataStats.gcodePath))
 		{
 			try
 			{
-				using (var csvFile = new StreamWriter(parsedPaddedCSVPath))
+				using (var csvFile = new StreamWriter(dataStats.parsedGcodePath))
 				{
 					csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");
 					try
@@ -92,9 +91,10 @@ public static class GcodeManager
 								if (!string.IsNullOrWhiteSpace(currentLine))
 								{
 									csvFile.WriteLine(GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats));
-									
+
 								}
 							}
+							return true;
 						}
 					}
 					catch (Exception e)
@@ -104,8 +104,7 @@ public static class GcodeManager
 			catch (Exception e)
 			{ LogError("The csv file could not be written to", e); }
 		}
-
-		return parsedPaddedCSVPath;
+		return false;
 	}
 	#endregion PublicMembers
 
@@ -183,7 +182,7 @@ public static class GcodeManager
 				dataStats.maxPos.z = Mathf.Max(dataStats.maxPos.z, lastValues.pos.z);
 
 				parsed = lastValues.ToCSVString();
-				dataStats.totalLines++;
+				dataStats.totalMcodeLines++;
 			}
 		}
 

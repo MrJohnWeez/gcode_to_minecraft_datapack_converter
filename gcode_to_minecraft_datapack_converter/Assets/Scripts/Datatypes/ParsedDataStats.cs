@@ -7,28 +7,37 @@ using UnityEngine;
 /// </summary>
 public class ParsedDataStats
 {
+	// Gcode
+	public int totalGcodeLines = 0;
+	public int totalGcodeMoveLines = 0;
+
+	// Mcode
 	public Vector3 minPos = new Vector3();
 	public Vector3 maxPos = new Vector3();
 	public float minExtrude = 0;
 	public float maxExtrude = 0;
 	public float minSpeed = 0;
 	public float maxSpeed = 0;
+	public int totalMcodeLines = 0;
+
+	// Paths
 	public string gcodePath = "";
+	public string parsedGcodePath = "";
 	public string mcodePath = "";
-	public int totalLines = 0;
 
-	public ParsedDataStats()
-	{
 
-	}
 
-	public ParsedDataStats(string currentGcodePath)
-	{
-		gcodePath = currentGcodePath;
-	}
 
-	public string AsString()
-	{
-		return minPos.x + "," + minPos.y + "," + minPos.z + "," + maxPos.x + "," + maxPos.y + "," + maxPos.z + "," + minExtrude + "," + maxExtrude + "," + minSpeed + "," + maxSpeed;
-	}
+	
+	// Need to test datapack
+	// Need to gather stats about datapack
+	//		- Lines of code
+	//		- Functions
+
+
+
+
+
+
+
 }

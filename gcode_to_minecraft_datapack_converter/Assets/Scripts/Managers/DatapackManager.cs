@@ -94,7 +94,7 @@ public class DatapackManager
 			CopyTemplateAndRename();
 			RenameFiles();
 			UpdateCopiedFiles();
-			WriteMinecraftCodeFiles(dataStats.totalLines, dataStats.mcodePath);
+			WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath);
 		}
 	}
 
