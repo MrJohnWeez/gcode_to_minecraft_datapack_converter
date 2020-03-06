@@ -28,19 +28,12 @@ using SFB;
 //		5,0,200,0,0,1,1
 //		5,5,200,0,1,0,0
 
-
-
-
-
+	
 /// <summary>
 /// Manager responsible for creating all files that make up the Minecraft datapack
 /// </summary>
-public class DatapackManager : MonoBehaviour
+public class DatapackManager
 {
-	// Mcode properties
-	private float _magnitudeScalar = 0.002f;
-	private float _maxMagnitude = 1f;
-
 	private const int _numberOfIORetryAttempts = 5;
 
 	// String Constants
@@ -84,10 +77,6 @@ public class DatapackManager : MonoBehaviour
 	private const string c_FakePlayerChar = "#";
 	private const string C_Slash = "/";
 
-	[SerializeField] private FileManager _fileManager = null;
-
-	private string _pathOfDatapackTemplate = "";    // Used to copy the common files needed for every mcode datapack
-
 	private string[] _excludeExtensions = new string[1] { ".meta" };
 	private string _gcodeFilePath = "";     // Path of gcode file on disk
 	private string _gcodeFileName = "";     // Main name of gcode file (without .gcode)
@@ -110,55 +99,30 @@ public class DatapackManager : MonoBehaviour
 	private string _datapackMcFuncTags = "";// File path for --------------------------------- datapack/data/minecraft/tags/functions
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
-	private McodeData _mcodeData = new McodeData();
 
-	private void Start()
+	public DatapackManager(in ParsedDataStats dataStats)
 	{
-		_pathOfDatapackTemplate = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
-	}
+		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)).ToLower();
+		_dateCreated = SafeFileManagement.GetDateNow();
+		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
+		_datapackName = c_MainDatapackName + "_" + _datapackUUID;
+		_shortUUID = _datapackUUID.FirstLast5();
+		_fakePlayerName = c_FakePlayerChar + _datapackUUID.Truncate(-30);
 
-	/// <summary>
-	/// Start the generation of a datapack (Will take some time?)
-	/// </summary>
-	public void GenerateDatapack()
-	{
-		SetUpVaribleNames();
 		_outputRoot = SafeFileManagement.FolderPath("Select where datapack will be saved");
 		if (!string.IsNullOrWhiteSpace(_outputRoot))
 		{
 			CopyTemplateAndRename();
 			RenameFiles();
 			UpdateCopiedFiles();
-			_mcodeData = ConvertToMcodeData(_fileManager.GetParsedGcodeLines());
-			_mcodeData.Log();
-			string writtenCSV = ParseGcodeToCSV();
-			print("Wrote CSV to: " + writtenCSV);
 
-			WriteMinecraftCodeFiles();
-			print("Finished!");
+			WriteMinecraftCodeFiles(dataStats.totalLines);
+
+			Debug.Log("Finished!");
 		}
 	}
 
-	private string ParseGcodeToCSV()
-	{
-		string csvName = "ParsedGcode" + SafeFileManagement.GetDateNow() + ".csv";
-		string tempPath = Path.Combine(Application.temporaryCachePath, csvName);
-		try
-		{
-			using (var sw = new StreamWriter(tempPath))
-			{
-
-				//sw.WriteLine(i);
-			}
-		}
-		catch (Exception e)
-		{
-			Debug.Log("The file could not be written to:\nError: \n" + e.Message.ToString());
-		}
-		return tempPath;
-	}
-
-	private void WriteMinecraftCodeFiles()
+	private void WriteMinecraftCodeFiles(int totalLines)
 	{
 		// Get the template file contense
 		string templateLineFill = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateLineWithFill));
@@ -170,7 +134,7 @@ public class DatapackManager : MonoBehaviour
 		int factor = 1000;
 		int factorPow2 = factor * factor;
 		int facotrPow3 = factorPow2 * factor;
-		int lineAmount = _mcodeData.data.Count + 1;
+		int lineAmount = totalLines + 1;
 
 		string lvl1Folder = "level1code0_" + (facotrPow3 - 1);
 		string lvl1Root = Path.Combine(_namespaceFunctions, lvl1Folder);
@@ -277,92 +241,10 @@ public class DatapackManager : MonoBehaviour
 		SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
 	}
 
-
-	private McodeData ConvertToMcodeData(List<List<string>> parsedGcode)
-	{
-		McodeData newMcodeData = new McodeData();
-		Vector3 pos = new Vector3();
-		float f = 0;
-		bool extrude = false;
-
-		// Add starting value at 0 0 0
-		newMcodeData.data.Add(new McodeLine());
-
-		foreach (List<string> gcodeLine in parsedGcode)
-		{
-			if (gcodeLine.Count > 1 && gcodeLine[0].ToUpper() == "G" && gcodeLine[1] == "1")
-			{
-				for (int i = 2; i < gcodeLine.Count; i++)
-				{
-					bool nextIsValid = i + 1 <= gcodeLine.Count - 1;
-					string upperTerm = gcodeLine[i].ToUpper();
-
-					if (nextIsValid)
-					{
-						if (upperTerm == "X")
-						{
-							try
-							{
-								pos.x = float.Parse(gcodeLine[i + 1]);
-							}
-							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
-						}
-						else if (upperTerm == "Y")
-						{
-							try
-							{
-								pos.z = float.Parse(gcodeLine[i + 1]);
-							}
-							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
-						}
-						else if (upperTerm == "Z")
-						{
-							try
-							{
-								pos.y = float.Parse(gcodeLine[i + 1]);
-							}
-							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
-						}
-						else if (upperTerm == "F")
-						{
-							try
-							{
-								f = Mathf.Clamp(float.Parse(gcodeLine[i + 1]) * _magnitudeScalar, 0, _maxMagnitude);
-							}
-							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
-						}
-						else if (upperTerm == "E")
-						{
-							try
-							{
-								float extrudeAmount = float.Parse(gcodeLine[i + 1]);
-								extrude = extrudeAmount > 0;
-							}
-							catch (Exception e) { LogFloatParseError(gcodeLine[i + 1], e.Message); }
-						}
-					}
-				}
-				// If we made it here we know something should have changed so make it a new Mcode line
-				newMcodeData.data.Add(new McodeLine(pos, f, extrude));
-			}
-		}
-
-		newMcodeData.CalculateMotionVectors();
-		// Calculate the motion vectors here
-
-
-		return newMcodeData;
-	}
-
-	private void LogFloatParseError(string stringThatTriedToParse, string causedException)
-	{
-		Debug.Log("Tried to parse: " + stringThatTriedToParse + " which is not a valid float!\n" + causedException);
-	}
-
 	/// <summary>
 	/// Populates the keyVar dictionary with all terms that should be replaced within the copied minecraft files
 	/// </summary>
-	public void InitulizeKeyVars()
+	private void InitulizeKeyVars()
 	{
 		string scoreboardVar = c_ScoreboardPrefix + _shortUUID;
 		string tag = "Tag" + _datapackUUID;
@@ -453,7 +335,8 @@ public class DatapackManager : MonoBehaviour
 	/// </summary>
 	private void CopyTemplateAndRename()
 	{
-		SafeFileManagement.DirectoryCopy(_pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, _numberOfIORetryAttempts);
+		string pathOfDatapackTemplate = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
+		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, _numberOfIORetryAttempts);
 
 		// Rename main datapack folder
 		string templateOutput = Path.Combine(_outputRoot, C_TemplateName);
@@ -470,21 +353,7 @@ public class DatapackManager : MonoBehaviour
 			_datapackMcFuncTags = Path.Combine(_dataFolderPath, c_Minecraft, c_Tags, c_Functions);
 		}
 	}
-
-	/// <summary>
-	/// Initulize all varibles based on the gcode file name and date
-	/// </summary>
-	private void SetUpVaribleNames()
-	{
-		_gcodeFilePath = _fileManager.GetGcodeFilePath();
-		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(_gcodeFilePath)).ToLower();
-		_dateCreated = SafeFileManagement.GetDateNow();
-		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
-		_datapackName = c_MainDatapackName + "_" + _datapackUUID;
-		_shortUUID = _datapackUUID.FirstLast5();
-		_fakePlayerName = c_FakePlayerChar + _datapackUUID.Truncate(-30);
-		LogDynamicVars();
-	}
+	
 
 	private string DatapackPath(params string[] values)
 	{
@@ -505,7 +374,7 @@ public class DatapackManager : MonoBehaviour
 	/// </summary>
 	private void LogDynamicVars()
 	{
-		print("_gcodeFilePath: " + _gcodeFilePath + " \n" +
+		Debug.Log("_gcodeFilePath: " + _gcodeFilePath + " \n" +
 			"_gcodeFileName: " + _gcodeFileName + "\n" +
 			"_dateCreated: " + _dateCreated + "\n" +
 			"_datapackUUID: " + _datapackUUID + "\n" +

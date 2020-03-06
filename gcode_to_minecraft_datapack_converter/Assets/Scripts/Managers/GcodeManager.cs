@@ -43,12 +43,18 @@ public static class GcodeManager
 							paddedCSVFile.ReadLine();   // Skip header
 							LastGcodeValues prevData = null;
 							LastGcodeValues currData = null;
+
+							// Add orgin as first value
+							McodeValues mcodeVals = new McodeValues();
+							mcodeFile.WriteLine(mcodeVals.ToCSVString());
+
+							// Continue to convert and calculate until last value from file is read
 							while (!paddedCSVFile.EndOfStream)
 							{
 								currentLine = paddedCSVFile.ReadLine();
 								currData = new LastGcodeValues(currentLine);
 
-								McodeValues mcodeVals = new McodeValues(prevData, currData, dataStats.maxSpeed);
+								mcodeVals = new McodeValues(prevData, currData, dataStats.maxSpeed);
 								prevData = currData;
 								mcodeFile.WriteLine(mcodeVals.ToCSVString());
 							}
@@ -69,12 +75,12 @@ public static class GcodeManager
 	/// </summary>
 	/// <param name="gcodePath">path to the gcode file to parse</param>
 	/// <returns>path to the created csv file</returns>
-	public static string GcodeToParsedPaddedCSV(string gcodePath, ref ParsedDataStats dataStats)
+	public static string GcodeToParsedPaddedCSV(ref ParsedDataStats dataStats)
 	{
 		string parsedPaddedCSVPath = "";
 		string csvName = "GcodeToParsedPaddedCSV_" + SafeFileManagement.GetDateNow() + ".csv";
 		parsedPaddedCSVPath = Path.Combine(Application.temporaryCachePath, csvName);
-		if (File.Exists(gcodePath))
+		if (File.Exists(dataStats.gcodePath))
 		{
 			try
 			{
@@ -83,7 +89,7 @@ public static class GcodeManager
 					csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");
 					try
 					{
-						using (var gcodeFile = new StreamReader(gcodePath))
+						using (var gcodeFile = new StreamReader(dataStats.gcodePath))
 						{
 							LastGcodeValues lastValues = new LastGcodeValues();
 							lastValues.pos = Vector3.zero;
@@ -98,13 +104,13 @@ public static class GcodeManager
 								if (!string.IsNullOrWhiteSpace(currentLine))
 								{
 									csvFile.WriteLine(GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats));
+									
 								}
 							}
 						}
 					}
 					catch (Exception e)
 					{ LogError("The gcode file could not be written to", e); }
-
 				}
 			}
 			catch (Exception e)
@@ -134,7 +140,7 @@ public static class GcodeManager
 	/// <param name="gcodeLine">gcode to convert</param>
 	/// <param name="lastValues">last gcode values that were converted</param>
 	/// <returns>gcode string as a csv string</returns>
-	private static string GcodeLineToCSVLine(string gcodeLine, ref LastGcodeValues lastValues, ref ParsedDataStats stats)
+	private static string GcodeLineToCSVLine(string gcodeLine, ref LastGcodeValues lastValues, ref ParsedDataStats dataStats)
 	{
 		string parsed = "";
 		string[] sections = gcodeLine.Split(' ');
@@ -174,19 +180,20 @@ public static class GcodeManager
 						}
 					}
 				}
-				stats.minExtrude = Mathf.Min(stats.minExtrude, lastValues.exturedAmount);
-				stats.minSpeed = Mathf.Min(stats.minSpeed, lastValues.moveSpeed);
-				stats.minPos.x = Mathf.Min(stats.minPos.x, lastValues.pos.x);
-				stats.minPos.y = Mathf.Min(stats.minPos.y, lastValues.pos.y);
-				stats.minPos.z = Mathf.Min(stats.minPos.z, lastValues.pos.z);
+				dataStats.minExtrude = Mathf.Min(dataStats.minExtrude, lastValues.exturedAmount);
+				dataStats.minSpeed = Mathf.Min(dataStats.minSpeed, lastValues.moveSpeed);
+				dataStats.minPos.x = Mathf.Min(dataStats.minPos.x, lastValues.pos.x);
+				dataStats.minPos.y = Mathf.Min(dataStats.minPos.y, lastValues.pos.y);
+				dataStats.minPos.z = Mathf.Min(dataStats.minPos.z, lastValues.pos.z);
 
-				stats.maxExtrude = Mathf.Min(stats.maxExtrude, lastValues.exturedAmount);
-				stats.maxSpeed = Mathf.Min(stats.maxSpeed, lastValues.moveSpeed);
-				stats.maxPos.x = Mathf.Min(stats.maxPos.x, lastValues.pos.x);
-				stats.maxPos.y = Mathf.Min(stats.maxPos.y, lastValues.pos.y);
-				stats.maxPos.z = Mathf.Min(stats.maxPos.z, lastValues.pos.z);
+				dataStats.maxExtrude = Mathf.Max(dataStats.maxExtrude, lastValues.exturedAmount);
+				dataStats.maxSpeed = Mathf.Max(dataStats.maxSpeed, lastValues.moveSpeed);
+				dataStats.maxPos.x = Mathf.Max(dataStats.maxPos.x, lastValues.pos.x);
+				dataStats.maxPos.y = Mathf.Max(dataStats.maxPos.y, lastValues.pos.y);
+				dataStats.maxPos.z = Mathf.Max(dataStats.maxPos.z, lastValues.pos.z);
 
 				parsed = lastValues.ToCSVString();
+				dataStats.totalLines++;
 			}
 		}
 

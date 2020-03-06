@@ -19,6 +19,15 @@ public class FileManager : MonoBehaviour
 	private static string[] _gcodeLines = null;
 	private string _gcodePath = "";
 
+
+
+
+
+	private ParsedDataStats dataStats = new ParsedDataStats();
+	private DatapackManager _datapackManager;
+
+
+
 	private void Start()
 	{
 		_gcodeDisplay.text = _instructions;
@@ -38,15 +47,28 @@ public class FileManager : MonoBehaviour
 		{
 			//_gcodeLines = SafeFileManagement.DisplayFile(_gcodePath, _gcodeDisplay);
 			//_parsedGcode = _gocdeManager.ParseGcodeFile(_gcodeLines);
-			ParsedDataStats dataStats = new ParsedDataStats();
-			string outputPath = GcodeManager.GcodeToParsedPaddedCSV(_gcodePath, ref dataStats);
-			string mcodeCSV = GcodeManager.ParsedPaddedCSVToMcodeCSV(outputPath, dataStats);
-			print(mcodeCSV);
-			//File.Delete(outputPath);
+			dataStats = new ParsedDataStats(_gcodePath);
+			string outputPath = GcodeManager.GcodeToParsedPaddedCSV(ref dataStats);
+			dataStats.mcodePath = GcodeManager.ParsedPaddedCSVToMcodeCSV(outputPath, dataStats);
+			File.Delete(outputPath);
 		}
 		else
 			_gcodeDisplay.text = _instructions;
 	}
+
+
+
+
+	public void CreateDatapack()
+	{
+		_datapackManager = new DatapackManager(dataStats);
+		File.Delete(mcodeCSV);
+	}
+
+
+
+
+
 
 	public List<List<string>> GetParsedGcodeLines()
 	{

@@ -7,8 +7,8 @@ using UnityEngine;
 /// </summary>
 public class McodeValues
 {
-	Vector3 pos = Vector3.zero;
-	Vector3 motion = Vector3.zero;
+	Vector3 pos = new Vector3();
+	Vector3 motion = new Vector3();
 	bool shouldExtrude = false;
 
 	public McodeValues()
@@ -28,7 +28,6 @@ public class McodeValues
 		{
 			pos = lastGcodeValues.pos;
 			shouldExtrude = lastGcodeValues.exturedAmount > 0;
-
 			motion = lastGcodeValues.pos - prevGcodeValues.pos;
 			float newSpeed = Mathf.Clamp(lastGcodeValues.moveSpeed, 0, maxMoveSpeed);
 			motion = motion.normalized * ConvertRange(0, maxMoveSpeed, 0, 1, newSpeed);
@@ -41,6 +40,25 @@ public class McodeValues
 				shouldExtrude = lastGcodeValues.exturedAmount > 0;
 				motion = Vector3.zero;
 			}
+		}
+	}
+
+
+
+	// This is where I left off
+
+
+
+	public McodeValues(string mcodeAsCSVstring)
+	{
+		string[] sections = lastGcodeValuesAsCSV.Split(',');
+		if (sections.Length >= 5)
+		{
+			pos.x = float.Parse(sections[0]);
+			pos.y = float.Parse(sections[1]);
+			pos.z = float.Parse(sections[2]);
+			exturedAmount = float.Parse(sections[3]);
+			moveSpeed = float.Parse(sections[4]);
 		}
 	}
 
