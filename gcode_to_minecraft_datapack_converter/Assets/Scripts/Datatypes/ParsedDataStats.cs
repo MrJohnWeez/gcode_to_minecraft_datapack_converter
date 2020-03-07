@@ -25,6 +25,11 @@ public class ParsedDataStats
 	public string parsedGcodePath = "";
 	public string mcodePath = "";
 
+	// Datapack
+	public int linesOfCode = 0;
+	public int numberOfFunctions = 0;
+
+
 
 
 

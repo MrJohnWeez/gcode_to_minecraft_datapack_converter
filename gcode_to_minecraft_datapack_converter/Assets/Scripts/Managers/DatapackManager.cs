@@ -129,7 +129,7 @@ public class DatapackManager
 					string lvl1ExecuteCode = "";
 					string lvl1UpdateCode = "";
 
-					for (int lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount && !mcodeCSVData.EndOfStream; lvl1 += factorPow2)
+					for (int lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
 					{
 						string lvl2Folder = "level2code" + lvl1 + "_" + (lvl1 + factorPow2 - 1);
 						string lvl2Root = Path.Combine(lvl1Root, lvl2Folder);
@@ -148,7 +148,7 @@ public class DatapackManager
 						lvl1CurrentUpdateCode = lvl1CurrentUpdateCode.Replace(C_LineNum, DatapackPath(lvl1Folder, lvl2Folder, C_UpdateCodeLineName));
 						lvl1UpdateCode += lvl1CurrentUpdateCode;
 
-						for (int lvl2 = lvl1; lvl2 < lvl1 + 1 * factorPow2 && lvl2 < lineAmount && !mcodeCSVData.EndOfStream; lvl2 += factor)
+						for (int lvl2 = lvl1; lvl2 < lvl1 + 1 * factorPow2 && lvl2 < lineAmount; lvl2 += factor)
 						{
 							string lvl3ExecuteCode = "";
 							string lvl3UpdateCode = "";
@@ -169,31 +169,37 @@ public class DatapackManager
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum, DatapackPath(localFolderRoot, C_UpdateCodeLineName));
 							lvl2UpdateCode += lvl2CurrentUpdateCode;
 
-							for (int lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount && !mcodeCSVData.EndOfStream; lvl3++)
+							for (int lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
 							{
 								string filePath = Path.Combine(lvl3Root, C_Line + lvl3 + C_McFunction);
-								string currentLineCode;
-								string currentUpdateCode;
-								string readData = mcodeCSVData.ReadLine();
-								parsedData = new McodeValues(readData);
+								string currentLineCode = "";
+								string currentUpdateCode = "";
+								string readData = "";
 
-								// Make sure to add special ending line when the last line is written
-								if (lvl3 != lineAmount - 1)
+								if (!mcodeCSVData.EndOfStream)
 								{
-									currentLineCode = parsedData.shouldExtrude ? templateLineFill : templateLineNoFill;
-									currentLineCode = currentLineCode.Replace(C_XNum, parsedData.motion.x.ToString("F10"));
-									currentLineCode = currentLineCode.Replace(C_YNum, parsedData.motion.y.ToString("F10"));
-									currentLineCode = currentLineCode.Replace(C_ZNum, parsedData.motion.z.ToString("F10"));
-									currentLineCode = currentLineCode.Replace(C_FillBlock, "stone");
+									readData = mcodeCSVData.ReadLine();
+									parsedData = new McodeValues(readData);
 
-									currentUpdateCode = templateUpdateCode;
-									currentUpdateCode = currentUpdateCode.Replace(C_LineNum, (lvl3).ToString());
-									currentUpdateCode = currentUpdateCode.Replace(C_XNum, parsedData.pos.x.ToString("F10"));
-									currentUpdateCode = currentUpdateCode.Replace(C_YNum, parsedData.pos.y.ToString("F10"));
-									currentUpdateCode = currentUpdateCode.Replace(C_ZNum, parsedData.pos.z.ToString("F10"));
-									lvl3UpdateCode += currentUpdateCode;
+									// Make sure to add special ending line when the last line is written
+									if (lvl3 != lineAmount - 1)
+									{
+										currentLineCode = parsedData.shouldExtrude ? templateLineFill : templateLineNoFill;
+										currentLineCode = currentLineCode.Replace(C_XNum, parsedData.motion.x.ToString("F10"));
+										currentLineCode = currentLineCode.Replace(C_YNum, parsedData.motion.y.ToString("F10"));
+										currentLineCode = currentLineCode.Replace(C_ZNum, parsedData.motion.z.ToString("F10"));
+										currentLineCode = currentLineCode.Replace(C_FillBlock, "stone");
+
+										currentUpdateCode = templateUpdateCode;
+										currentUpdateCode = currentUpdateCode.Replace(C_LineNum, (lvl3).ToString());
+										currentUpdateCode = currentUpdateCode.Replace(C_XNum, parsedData.pos.x.ToString("F10"));
+										currentUpdateCode = currentUpdateCode.Replace(C_YNum, parsedData.pos.y.ToString("F10"));
+										currentUpdateCode = currentUpdateCode.Replace(C_ZNum, parsedData.pos.z.ToString("F10"));
+										lvl3UpdateCode += currentUpdateCode;
+									}
 								}
-								else
+
+								if(lvl3 == lineAmount - 1)
 								{
 									currentLineCode = templateFinishedLine;
 								}
