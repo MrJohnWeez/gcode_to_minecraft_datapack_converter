@@ -70,7 +70,8 @@ public class FileManager : MonoBehaviour
 
 		// Possibly use a enumerator 
 		// Possibly use callbacks to determine what state the datapack generation is in
-
+		// Add a filesize constraint! 2,500kb or something
+		// Add a option with a warning if the user wants to go over this
 
 
 

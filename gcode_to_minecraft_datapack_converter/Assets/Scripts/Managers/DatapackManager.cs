@@ -81,7 +81,7 @@ public class DatapackManager
 
 	public DatapackManager(ref ParsedDataStats dataStats)
 	{
-		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)).ToLower();
+		_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
 		_dateCreated = SafeFileManagement.GetDateNow();
 		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 		_datapackName = C_MainDatapackName + "_" + _datapackUUID;
@@ -100,6 +100,18 @@ public class DatapackManager
 	}
 
 	#region PrivateMembers
+	/// <summary>
+	/// Parse given string and return new string that is mcdatapack allowed
+	/// </summary>
+	/// <param name="name">String to be paresed</param>
+	/// <returns></returns>
+	private string MakeSafeString(string name)
+	{
+		name = name.ToLower();
+		System.Text.RegularExpressions.Regex rgx = new System.Text.RegularExpressions.Regex("[^a-z0-9_-]");
+		return rgx.Replace(name, "");
+	}
+
 	private void WriteMinecraftCodeFiles(int totalLines, string mcodeCSVFilePath)
 	{
 		if (File.Exists(mcodeCSVFilePath))
