@@ -24,25 +24,5 @@ public class ParsedDataStats
 	public string gcodePath = "";
 	public string parsedGcodePath = "";
 	public string mcodePath = "";
-
-	// Datapack
-	public int linesOfCode = 0;
-	public int numberOfFunctions = 0;
-
-
-
-
-
-	
-	// Need to test datapack
-	// Need to gather stats about datapack
-	//		- Lines of code
-	//		- Functions
-
-
-
-
-
-
-
+	public string datapackPath = "";
 }

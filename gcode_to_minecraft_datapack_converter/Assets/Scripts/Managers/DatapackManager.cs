@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System;
-
+using System.Threading;
 /// <summary>
 /// Manager responsible for creating all files that make up the Minecraft datapack
 /// </summary>
@@ -79,7 +79,7 @@ public class DatapackManager
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 
-	public DatapackManager(in ParsedDataStats dataStats)
+	public DatapackManager(ref ParsedDataStats dataStats)
 	{
 		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)).ToLower();
 		_dateCreated = SafeFileManagement.GetDateNow();
@@ -92,6 +92,7 @@ public class DatapackManager
 		if (!string.IsNullOrWhiteSpace(_outputRoot))
 		{
 			CopyTemplateAndRename();
+			dataStats.datapackPath = _datapackRootPath;
 			RenameFiles();
 			UpdateCopiedFiles();
 			WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath);

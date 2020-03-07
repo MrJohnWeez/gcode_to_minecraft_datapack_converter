@@ -32,8 +32,7 @@ public class FileManager : MonoBehaviour
 	private readonly ExtensionFilter[] extensions = { new ExtensionFilter("RepRap toolchain Gcode File", "gcode") };
 
 	[SerializeField] private TMP_Text _filePathDisplay = null;
-
-	private string _gcodePath = "";
+	
 	private ParsedDataStats _dataStats = new ParsedDataStats();
 	private DatapackManager _datapackManager;
 
@@ -66,9 +65,32 @@ public class FileManager : MonoBehaviour
 	/// </summary>
 	public void CreateDatapack()
 	{
+
+
+
+		// Possibly use a enumerator 
+		// Possibly use callbacks to determine what state the datapack generation is in
+
+
+
+
+
+
+
+
+
+
 		Debug.Log("Creating Datapack");
-		_datapackManager = new DatapackManager(_dataStats);
+		_datapackManager = new DatapackManager(ref _dataStats);
 		File.Delete(_dataStats.mcodePath);
+
+		Debug.Log("Calculating Stats");
+		DatapackStats datapackStats = new DatapackStats(_dataStats.datapackPath);
+		//Debug.Log("linesOfCode: " + datapackStats.linesOfCode);
+		//Debug.Log("numOfFunctions: " + datapackStats.numOfFunctions);
+		//Debug.Log("numOfFiles: " + datapackStats.numOfFiles);
+		//Debug.Log("numOfDirectories: " + datapackStats.numOfDirectories);
+
 		Debug.Log("Datapack generated!");
 	}
 }
