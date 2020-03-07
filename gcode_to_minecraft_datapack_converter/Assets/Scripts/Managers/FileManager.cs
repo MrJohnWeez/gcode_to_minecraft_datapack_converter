@@ -4,6 +4,9 @@ using UnityEngine;
 using SFB;
 using TMPro;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System;
 
 // Pipeline example:
 //	Gcode -> Parsed padded CSV -> mcode CSV -> Datapack
@@ -35,11 +38,17 @@ public class FileManager : MonoBehaviour
 	
 	private ParsedDataStats _dataStats = new ParsedDataStats();
 	private DatapackManager _datapackManager;
+	
+	private void Update()
+	{
+		//if(Time.frameCount % 10 == 0)
+		Debug.Log("Frame");
+	}
 
 	/// <summary>
 	/// Lets the user select a gcode file and parses the file into a mcode (minecraft code) csv file
 	/// </summary>
-	public void GcodeSelectAndParse()
+	public async void GcodeSelectAndParseAsync()
 	{
 		string[] gCodePaths = StandaloneFileBrowser.OpenFilePanel("Open File", "", extensions, false);
 		_dataStats.gcodePath = gCodePaths.Length > 0 ? gCodePaths[0] : "";
@@ -58,6 +67,8 @@ public class FileManager : MonoBehaviour
 				File.Delete(_dataStats.parsedGcodePath);
 			}
 		}
+
+		await CreateADatapack();
 	}
 
 	/// <summary>
@@ -67,31 +78,56 @@ public class FileManager : MonoBehaviour
 	{
 
 
-
-		// Possibly use a enumerator 
-		// Possibly use callbacks to determine what state the datapack generation is in
-		// Add a filesize constraint! 2,500kb or something
-		// Add a option with a warning if the user wants to go over this
-
-
-
-
-
-
-
-
-
 		Debug.Log("Creating Datapack");
-		_datapackManager = new DatapackManager(ref _dataStats);
+		_datapackManager = new DatapackManager();
+		_datapackManager.Generate(ref _dataStats);
 		File.Delete(_dataStats.mcodePath);
 
 		Debug.Log("Calculating Stats");
 		DatapackStats datapackStats = new DatapackStats(_dataStats.datapackPath);
-		//Debug.Log("linesOfCode: " + datapackStats.linesOfCode);
-		//Debug.Log("numOfFunctions: " + datapackStats.numOfFunctions);
-		//Debug.Log("numOfFiles: " + datapackStats.numOfFiles);
-		//Debug.Log("numOfDirectories: " + datapackStats.numOfDirectories);
-
 		Debug.Log("Datapack generated!");
+
+
+		// Convert everything to async calls
+		// https://stackoverflow.com/questions/36933869/how-to-make-a-custom-async-progress-method
+		// Add a filesize constraint! 2,500kb or something
+		// Add a option with a warning if the user wants to go over this
+	}
+
+	async Task CreateADatapack()
+	{
+		Debug.Log("Inside async task");
+		long nthPrime = 0;
+		nthPrime = await FindPrimeNumber(1000); //set higher value for more time
+		Debug.Log("Finished async task");
+	}
+
+	public Task<long> FindPrimeNumber(int n)
+	{
+		return Task.Run(() =>
+		{
+			int count = 0;
+			long a = 2;
+			while (count < n)
+			{
+				long b = 2;
+				int prime = 1;// to check if found a prime
+				while (b * b <= a)
+				{
+					if (a % b == 0)
+					{
+						prime = 0;
+						break;
+					}
+					b++;
+				}
+				if (prime > 0)
+				{
+					count++;
+				}
+				a++;
+			}
+			return (--a);
+		});
 	}
 }

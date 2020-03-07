@@ -79,7 +79,7 @@ public class DatapackManager
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 
-	public DatapackManager(ref ParsedDataStats dataStats)
+	public void Generate(ref ParsedDataStats dataStats)
 	{
 		_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
 		_dateCreated = SafeFileManagement.GetDateNow();
