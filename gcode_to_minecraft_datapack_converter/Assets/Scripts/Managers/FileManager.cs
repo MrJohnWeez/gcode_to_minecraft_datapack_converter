@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System;
 
+
 // Pipeline example:
 //	Gcode -> Parsed padded CSV -> mcode CSV -> Datapack
 //		 Gcode:
@@ -38,11 +39,24 @@ public class FileManager : MonoBehaviour
 	
 	private ParsedDataStats _dataStats = new ParsedDataStats();
 	private DatapackManager _datapackManager;
-	
+	public float total = 0;
+
+	CancellationTokenSource source;
+
+
+
 	private void Update()
 	{
-		//if(Time.frameCount % 10 == 0)
-		Debug.Log("Frame");
+		if(Time.frameCount % 30 == 0)
+			Debug.Log("Percent complate: " + total/500000.0f);
+
+
+
+		if(Input.GetKeyDown(KeyCode.Space))
+		{
+			Debug.Log("Canceled Async task!");
+			source.Cancel();
+		}
 	}
 
 	/// <summary>
@@ -68,9 +82,11 @@ public class FileManager : MonoBehaviour
 			}
 		}
 
-		await CreateADatapack();
+		source = new CancellationTokenSource();
+		await CreateADatapack(source.Token);
+		source.Dispose();
 	}
-
+	
 	/// <summary>
 	/// Takes the parsed gcode csv file and outputs it
 	/// </summary>
@@ -89,44 +105,70 @@ public class FileManager : MonoBehaviour
 
 
 		// Convert everything to async calls
-		// https://stackoverflow.com/questions/36933869/how-to-make-a-custom-async-progress-method
+		// https://stackoverflow.com/questions/10134310/how-to-cancel-a-task-in-await
 		// Add a filesize constraint! 2,500kb or something
 		// Add a option with a warning if the user wants to go over this
 	}
 
-	async Task CreateADatapack()
+	private void Test(float data, string msg)
+	{
+		total = data;
+	}
+
+	async Task CreateADatapack(CancellationToken cancellationToken)
 	{
 		Debug.Log("Inside async task");
 		long nthPrime = 0;
-		nthPrime = await FindPrimeNumber(1000); //set higher value for more time
+
+		ProgressAmount<float> progress = new ProgressAmount<float>(); // define your own type or use a builtin type
+		progress.ValueChangedEvent += Test;
+
+		Task<long> test = FindPrimeNumber(500000, progress, cancellationToken);
+		nthPrime = await test;
 		Debug.Log("Finished async task");
 	}
 
-	public Task<long> FindPrimeNumber(int n)
+	public Task<long> FindPrimeNumber(int n, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
 			int count = 0;
 			long a = 2;
-			while (count < n)
+
+			try
 			{
-				long b = 2;
-				int prime = 1;// to check if found a prime
-				while (b * b <= a)
+				while (count < n)
 				{
-					if (a % b == 0)
+					long b = 2;
+					int prime = 1;// to check if found a prime
+					while (b * b <= a)
 					{
-						prime = 0;
-						break;
+						if (a % b == 0)
+						{
+							prime = 0;
+							break;
+						}
+						b++;
 					}
-					b++;
+					if (prime > 0)
+					{
+						count++;
+						progess.ReportValue(count, "Finished with");
+					}
+					a++;
+
+					cancellationToken.ThrowIfCancellationRequested();
 				}
-				if (prime > 0)
-				{
-					count++;
-				}
-				a++;
 			}
+			catch(OperationCanceledException wasCanceled)
+			{
+				Debug.Log("Async Event was canceled");
+			}
+			catch(ObjectDisposedException objectRemoved)
+			{
+				Debug.Log("Async Event was removed already");
+			}
+			
 			return (--a);
 		});
 	}
