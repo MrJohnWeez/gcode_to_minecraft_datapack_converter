@@ -4,6 +4,8 @@ using UnityEngine;
 using System.IO;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
+
 /// <summary>
 /// Manager responsible for creating all files that make up the Minecraft datapack
 /// </summary>
@@ -79,24 +81,28 @@ public class DatapackManager
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 
-	public void Generate(ref ParsedDataStats dataStats)
+	public Task<ParsedDataStats> Generate(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
-		_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
-		_dateCreated = SafeFileManagement.GetDateNow();
-		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
-		_datapackName = C_MainDatapackName + "_" + _datapackUUID;
-		_shortUUID = _datapackUUID.FirstLast5();
-		_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
-
-		_outputRoot = SafeFileManagement.FolderPath("Select where datapack will be saved");
-		if (!string.IsNullOrWhiteSpace(_outputRoot))
+		return Task.Run(() =>
 		{
-			CopyTemplateAndRename();
-			dataStats.datapackPath = _datapackRootPath;
-			RenameFiles();
-			UpdateCopiedFiles();
-			WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath);
-		}
+			_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
+			_dateCreated = SafeFileManagement.GetDateNow();
+			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
+			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
+			_shortUUID = _datapackUUID.FirstLast5();
+			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
+
+			_outputRoot = dataStats.datapackPath;
+			if (!string.IsNullOrWhiteSpace(_outputRoot))
+			{
+				CopyTemplateAndRename(dataStats);
+				dataStats.datapackPath = _datapackRootPath;
+				RenameFiles();
+				UpdateCopiedFiles();
+				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath);
+			}
+			return dataStats;
+		});
 	}
 
 	#region PrivateMembers
@@ -344,9 +350,9 @@ public class DatapackManager
 	/// <summary>
 	/// Copy folders and files from datapack tempate then rename folders
 	/// </summary>
-	private void CopyTemplateAndRename()
+	private void CopyTemplateAndRename(ParsedDataStats dataStats)
 	{
-		string pathOfDatapackTemplate = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
+		string pathOfDatapackTemplate = Path.Combine(dataStats.unityDataPath, "StreamingAssets", "CopyTemplate");
 		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, _numberOfIORetryAttempts);
 
 		// Rename main datapack folder

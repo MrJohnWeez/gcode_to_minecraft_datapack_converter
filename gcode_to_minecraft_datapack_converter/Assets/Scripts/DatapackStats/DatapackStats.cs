@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 public class DatapackStats
 {
@@ -14,31 +16,29 @@ public class DatapackStats
 	public int numOfDirectories = 0;
 	public string datapackPath = "";
 
-	public DatapackStats()
+	public Task Calculate(string datapackRootPath, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
-
-	}
-
-	public DatapackStats(string datapackRootPath)
-	{
-		datapackPath = datapackRootPath;
-		string[] filesAndDir = Directory.GetFileSystemEntries(datapackPath, "*", SearchOption.AllDirectories);
-		foreach (string path in filesAndDir)
+		return Task.Run(() =>
 		{
-			if (File.Exists(path))
+			datapackPath = datapackRootPath;
+			string[] filesAndDir = Directory.GetFileSystemEntries(datapackPath, "*", SearchOption.AllDirectories);
+			foreach (string path in filesAndDir)
 			{
-				numOfFiles++;
-				if (path.Contains(C_Mcfunction))
+				if (File.Exists(path))
 				{
-					numOfFunctions++;
-					linesOfCode += CountLinesOfCode(path);
+					numOfFiles++;
+					if (path.Contains(C_Mcfunction))
+					{
+						numOfFunctions++;
+						linesOfCode += CountLinesOfCode(path);
+					}
+				}
+				else if (Directory.Exists(path))
+				{
+					numOfDirectories++;
 				}
 			}
-			else if (Directory.Exists(path))
-			{
-				numOfDirectories++;
-			}
-		}
+		});
 	}
 
 	private int CountLinesOfCode(string filePath)

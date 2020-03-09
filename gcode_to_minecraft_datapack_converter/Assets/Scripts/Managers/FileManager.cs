@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System;
+using UnityEngine.UI;
 
 
 // Pipeline example:
@@ -32,144 +33,90 @@ using System;
 /// </summary>
 public class FileManager : MonoBehaviour
 {
-	private const string C_Instructions = "Select a 3D printer Gcode file.";
 	private readonly ExtensionFilter[] extensions = { new ExtensionFilter("RepRap toolchain Gcode File", "gcode") };
 
-	[SerializeField] private TMP_Text _filePathDisplay = null;
-	
-	private ParsedDataStats _dataStats = new ParsedDataStats();
-	private DatapackManager _datapackManager;
+	[SerializeField] private TMP_Text _gcodeFilePathText = null;
+	[SerializeField] private TMP_Text _datapackOutputPathText = null;
+	[SerializeField] private Slider _progressBar = null;
+
+	private string _gcodeFilePath = "";
+	private string _datapackOutputPath = "";
 	public float total = 0;
-
-	CancellationTokenSource source;
-
-
+	public float progressBarValue = 0;
+	CancellationTokenSource sourceCancel;
 
 	private void Update()
 	{
-		if(Time.frameCount % 30 == 0)
-			Debug.Log("Percent complate: " + total/500000.0f);
+		_progressBar.value = progressBarValue;
 
+		if(Time.frameCount % 60 == 0)
+			Debug.Log("Test: " + Time.frameCount);
+	}
 
+	// Add a filesize constraint! 2,500kb or something
+	// Add a option with a warning if the user wants to go over this
+	public void SelectGcodeFile()
+	{
+		string[] gCodePaths = StandaloneFileBrowser.OpenFilePanel("Select Gcode file", "", extensions, false);
+		_gcodeFilePath = gCodePaths.Length > 0 ? gCodePaths[0] : "";
+		_gcodeFilePathText.text = _gcodeFilePath;
+	}
 
-		if(Input.GetKeyDown(KeyCode.Space))
+	public void SelectDatapackOutputPath()
+	{
+		_datapackOutputPath = SafeFileManagement.FolderPath("Select where datapack will be saved");
+		_datapackOutputPathText.text = _datapackOutputPath;
+	}
+
+	// Make progress bar work with async calls
+	// Split progress bar into 2 bars
+	// make array[] of floats and use those all together for the progress bars
+	public async void ConvertAndCreateDatapackAsync()
+	{
+		if (File.Exists(_gcodeFilePath) && Directory.Exists(_datapackOutputPath))
 		{
-			Debug.Log("Canceled Async task!");
-			source.Cancel();
-		}
-	}
+			progressBarValue = 0;
+			ParsedDataStats dataStats = new ParsedDataStats(_gcodeFilePath, _datapackOutputPath);
 
-	/// <summary>
-	/// Lets the user select a gcode file and parses the file into a mcode (minecraft code) csv file
-	/// </summary>
-	public async void GcodeSelectAndParseAsync()
-	{
-		string[] gCodePaths = StandaloneFileBrowser.OpenFilePanel("Open File", "", extensions, false);
-		_dataStats.gcodePath = gCodePaths.Length > 0 ? gCodePaths[0] : "";
-
-		_filePathDisplay.text = _dataStats.gcodePath;
-
-		if (!string.IsNullOrEmpty(_dataStats.gcodePath))
-		{
-			Debug.Log("Loading and converting gcode");
-			if (GcodeManager.GcodeToParsedPaddedCSV(ref _dataStats))
+			sourceCancel = new CancellationTokenSource();
+			ProgressAmount<float>[] progresses = new ProgressAmount<float>[4]
 			{
-				if (GcodeManager.ParsedPaddedCSVToMcodeCSV(ref _dataStats))
-				{
-					Debug.Log("Finished");
-				}
-				File.Delete(_dataStats.parsedGcodePath);
-			}
-		}
+				new ProgressAmount<float>(0),
+				new ProgressAmount<float>(1),
+				new ProgressAmount<float>(2),
+				new ProgressAmount<float>(3)
+			};
 
-		source = new CancellationTokenSource();
-		await CreateADatapack(source.Token);
-		source.Dispose();
-	}
-	
-	/// <summary>
-	/// Takes the parsed gcode csv file and outputs it
-	/// </summary>
-	public void CreateDatapack()
-	{
+			foreach(ProgressAmount<float> pa in progresses)
+				pa.ValueChangedEvent += UpdateProgressBarValue;
 
+			print("Parsing Gcode");
+			dataStats = await GcodeManager.GcodeToParsedPaddedCSV(dataStats, progresses[0], sourceCancel.Token);
 
-		Debug.Log("Creating Datapack");
-		_datapackManager = new DatapackManager();
-		_datapackManager.Generate(ref _dataStats);
-		File.Delete(_dataStats.mcodePath);
-
-		Debug.Log("Calculating Stats");
-		DatapackStats datapackStats = new DatapackStats(_dataStats.datapackPath);
-		Debug.Log("Datapack generated!");
-
-
-		// Convert everything to async calls
-		// https://stackoverflow.com/questions/10134310/how-to-cancel-a-task-in-await
-		// Add a filesize constraint! 2,500kb or something
-		// Add a option with a warning if the user wants to go over this
-	}
-
-	private void Test(float data, string msg)
-	{
-		total = data;
-	}
-
-	async Task CreateADatapack(CancellationToken cancellationToken)
-	{
-		Debug.Log("Inside async task");
-		long nthPrime = 0;
-
-		ProgressAmount<float> progress = new ProgressAmount<float>(); // define your own type or use a builtin type
-		progress.ValueChangedEvent += Test;
-
-		Task<long> test = FindPrimeNumber(500000, progress, cancellationToken);
-		nthPrime = await test;
-		Debug.Log("Finished async task");
-	}
-
-	public Task<long> FindPrimeNumber(int n, ProgressAmount<float> progess, CancellationToken cancellationToken)
-	{
-		return Task.Run(() =>
-		{
-			int count = 0;
-			long a = 2;
-
-			try
-			{
-				while (count < n)
-				{
-					long b = 2;
-					int prime = 1;// to check if found a prime
-					while (b * b <= a)
-					{
-						if (a % b == 0)
-						{
-							prime = 0;
-							break;
-						}
-						b++;
-					}
-					if (prime > 0)
-					{
-						count++;
-						progess.ReportValue(count, "Finished with");
-					}
-					a++;
-
-					cancellationToken.ThrowIfCancellationRequested();
-				}
-			}
-			catch(OperationCanceledException wasCanceled)
-			{
-				Debug.Log("Async Event was canceled");
-			}
-			catch(ObjectDisposedException objectRemoved)
-			{
-				Debug.Log("Async Event was removed already");
-			}
+			print("Converting to Mcode");
+			dataStats = await GcodeManager.ParsedPaddedCSVToMcodeCSV(dataStats, progresses[1], sourceCancel.Token);
 			
-			return (--a);
-		});
+			print("Creating Datapack");
+			DatapackManager datapackManager = new DatapackManager();
+			dataStats = await datapackManager.Generate(dataStats, progresses[2], sourceCancel.Token);
+
+			print("Calculating Stats");
+			DatapackStats datapackStats = new DatapackStats();
+			await datapackStats.Calculate(dataStats.datapackPath, progresses[3], sourceCancel.Token);
+
+			File.Delete(dataStats.parsedGcodePath);
+			File.Delete(dataStats.mcodePath);
+
+			sourceCancel.Dispose();
+			foreach (ProgressAmount<float> pa in progresses)
+				pa.ValueChangedEvent -= UpdateProgressBarValue;
+		}
+		print("Done");
+	}
+
+	public void UpdateProgressBarValue(ProgressAmount<float> updateAmount)
+	{
+		// Need to make sure we update the correct data value
+		progressBarValue = updateAmount.Data;
 	}
 }

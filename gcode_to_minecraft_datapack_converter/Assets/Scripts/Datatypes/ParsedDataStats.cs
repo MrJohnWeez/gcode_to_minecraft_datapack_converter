@@ -20,9 +20,29 @@ public class ParsedDataStats
 	public float maxSpeed = 0;
 	public int totalMcodeLines = 0;
 
-	// Paths
+	// File Gen Paths
 	public string gcodePath = "";
 	public string parsedGcodePath = "";
 	public string mcodePath = "";
 	public string datapackPath = "";
+
+	// Application Paths
+	public string tempFilePath = "";
+	public string unityDataPath = "";
+
+	public ParsedDataStats(string inGcodePath, string inDatapackOutputPath)
+	{
+		gcodePath = inGcodePath;
+		datapackPath = inDatapackOutputPath;
+		tempFilePath = Application.temporaryCachePath;
+		unityDataPath = Application.dataPath;
+	}
+
+	public ParsedDataStats(string inGcodePath, string inDatapackOutputPath, string inTempFilePath, string indataPath)
+	{
+		gcodePath = inGcodePath;
+		datapackPath = inDatapackOutputPath;
+		tempFilePath = inTempFilePath;
+		unityDataPath = indataPath;
+	}
 }

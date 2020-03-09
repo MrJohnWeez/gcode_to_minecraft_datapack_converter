@@ -4,18 +4,28 @@ using UnityEngine;
 using System;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Class that lets values be passed from async functions to main unity thread
+/// </summary>
+/// <typeparam name="T">Type that can be passed to change event</typeparam>
 public class ProgressAmount<T>
 {
-	public delegate void ProgressUpdate(T data, string msg);
+	public delegate void ProgressUpdate(ProgressAmount<T> self);
 	public ProgressUpdate ValueChangedEvent;
-	private T data;
-	private string message = "";
+
+	public T Data { get; private set; }
+	public string Message { get; private set; } = "";
+	public int Id { get; private set; } = 0;
+
+	public ProgressAmount(int idValue)
+	{
+		Id = idValue;
+	}
 
 	public void ReportValue(T newValue, string newMessage)
 	{
-		data = newValue;
-		message = newMessage;
-
-		ValueChangedEvent?.Invoke(data, message);
+		Data = newValue;
+		Message = newMessage;
+		ValueChangedEvent?.Invoke(this);
 	}
 }
