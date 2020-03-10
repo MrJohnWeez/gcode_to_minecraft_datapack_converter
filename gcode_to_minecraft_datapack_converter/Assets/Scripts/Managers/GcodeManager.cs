@@ -12,10 +12,19 @@ using System.Threading.Tasks;
 public static class GcodeManager
 {
 	#region PublicMembers
+
+	/// <summary>
+	/// Converts csv file of x,y,z,extrude,movespeed to xpos,ypos,zpos,xmov,ymov,zmov,shouldExtrude
+	/// </summary>
+	/// <param name="dataStats">The stats class used when parsing gcode files</param>
+	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
+	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
+	/// <returns>Modified ParsedDataStats type</returns>
 	public static Task<ParsedDataStats> ParsedPaddedCSVToMcodeCSV(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
+			progess.ReportValue(0.0f, "Converting Gcode");
 			string csvName = "ParsedPaddedCSVToMcodeCSV_" + SafeFileManagement.GetDateNow() + ".csv";
 			dataStats.mcodePath = Path.Combine(dataStats.tempFilePath, csvName);
 			if (File.Exists(dataStats.parsedGcodePath))
@@ -27,22 +36,32 @@ public static class GcodeManager
 						mcodeFile.WriteLine("Xcord,Ycord,Zcord,XMotion,YMotion,ZMotion,ShouldExtrude");
 						try
 						{
+							FileInfo parsedGcodeFileInfo = new FileInfo(dataStats.parsedGcodePath);
+							long parsedGcodeFileLength = parsedGcodeFileInfo.Length;
+							long byteCount = 0;
+
+							string currentLine = "";
+							LastGcodeValues prevData = new LastGcodeValues();
+							LastGcodeValues currData = new LastGcodeValues();
+
+							// Add orgin as first value
+							McodeValues mcodeVals = new McodeValues();
+							mcodeFile.WriteLine(mcodeVals.ToCSVString());
+
 							using (var paddedCSVFile = new StreamReader(dataStats.parsedGcodePath))
 							{
-								string currentLine = "";
+								
 								paddedCSVFile.ReadLine();   // Skip header
-
-								LastGcodeValues prevData = new LastGcodeValues();
-								LastGcodeValues currData = new LastGcodeValues();
-
-								// Add orgin as first value
-								McodeValues mcodeVals = new McodeValues();
-								mcodeFile.WriteLine(mcodeVals.ToCSVString());
-
+								
 								// Continue to convert and calculate until last value from file is read
 								while (!paddedCSVFile.EndOfStream)
 								{
 									currentLine = paddedCSVFile.ReadLine();
+
+									byteCount += System.Text.Encoding.Unicode.GetByteCount(currentLine);
+									progess.ReportValue(byteCount / parsedGcodeFileLength, "Converting Gcode");
+									cancellationToken.ThrowIfCancellationRequested();
+
 									currData = new LastGcodeValues(currentLine);
 
 									mcodeVals = new McodeValues(prevData, currData, dataStats.maxSpeed);
@@ -51,6 +70,14 @@ public static class GcodeManager
 								}
 							}
 						}
+						catch (OperationCanceledException wasCanceled)
+						{
+							throw wasCanceled;
+						}
+						catch (ObjectDisposedException wasAreadyCanceled)
+						{
+							throw wasAreadyCanceled;
+						}
 						catch (Exception e)
 						{ LogError("The gcode file could not be written to", e); }
 					}
@@ -58,21 +85,26 @@ public static class GcodeManager
 				catch (Exception e)
 				{ LogError("The csv file could not be written to", e); }
 			}
+			progess.ReportValue(1.0f, "Converting Gcode");
 			return dataStats;
 		});
 	}
-
+	
 	/// <summary>
 	/// Converts a given gcode file path to a csv file containing padded x,y,z,extrude,movespeed
 	/// </summary>
-	/// <param name="gcodePath">path to the gcode file to parse</param>
-	/// <returns>path to the created csv file</returns>
+	/// <param name="dataStats">The stats class used when parsing gcode files</param>
+	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
+	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
+	/// <returns>Modified ParsedDataStats type</returns>
 	public static Task<ParsedDataStats> GcodeToParsedPaddedCSV(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
+			progess.ReportValue(0.0f, "Parsing Gcode");
 			string csvName = "GcodeToParsedPaddedCSV_" + SafeFileManagement.GetDateNow() + ".csv";
 			dataStats.parsedGcodePath = Path.Combine(dataStats.tempFilePath, csvName);
+			
 			if (File.Exists(dataStats.gcodePath))
 			{
 				try
@@ -82,24 +114,41 @@ public static class GcodeManager
 						csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");
 						try
 						{
+							FileInfo gcodeFileInfo = new FileInfo(dataStats.gcodePath);
+							long gcodeFileLength = gcodeFileInfo.Length;
+							long byteCount = 0;
+
+							LastGcodeValues lastValues = new LastGcodeValues();
+							lastValues.pos = Vector3.zero;
+							lastValues.exturedAmount = 0;
+							lastValues.moveSpeed = 0;
+							string currentLine = "";
+
 							using (var gcodeFile = new StreamReader(dataStats.gcodePath))
 							{
-								LastGcodeValues lastValues = new LastGcodeValues();
-								lastValues.pos = Vector3.zero;
-								lastValues.exturedAmount = 0;
-								lastValues.moveSpeed = 0;
-
-								string currentLine = "";
 								while (!gcodeFile.EndOfStream)
 								{
 									currentLine = gcodeFile.ReadLine();
+
+									byteCount += System.Text.Encoding.Unicode.GetByteCount(currentLine);
+									progess.ReportValue(byteCount / gcodeFileLength, "Parsing Gcode");
+									cancellationToken.ThrowIfCancellationRequested();
+
 									currentLine = RemoveNonGcode(currentLine);
-									if (!string.IsNullOrWhiteSpace(currentLine))
+									if (!currentLine.IsEmpty())
 									{
 										csvFile.WriteLine(GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats));
 									}
 								}
 							}
+						}
+						catch (OperationCanceledException wasCanceled)
+						{
+							throw wasCanceled;
+						}
+						catch (ObjectDisposedException wasAreadyCanceled)
+						{
+							throw wasAreadyCanceled;
 						}
 						catch (Exception e)
 						{ LogError("The gcode file could not be written to", e); }
@@ -108,6 +157,7 @@ public static class GcodeManager
 				catch (Exception e)
 				{ LogError("The csv file could not be written to", e); }
 			}
+			progess.ReportValue(1.0f, "Parsing Gcode");
 			return dataStats;
 		});
 	}

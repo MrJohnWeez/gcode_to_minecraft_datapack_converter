@@ -6,6 +6,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Runs calculations on a datapack folder
+/// </summary>
 public class DatapackStats
 {
 	private const string C_Mcfunction = ".mcfunction";
@@ -20,27 +23,45 @@ public class DatapackStats
 	{
 		return Task.Run(() =>
 		{
+			progess.ReportValue(0.0f, "Calculating Stats");
 			datapackPath = datapackRootPath;
 			string[] filesAndDir = Directory.GetFileSystemEntries(datapackPath, "*", SearchOption.AllDirectories);
-			foreach (string path in filesAndDir)
+			for (int i = 0; i < filesAndDir.Length; i++)
 			{
-				if (File.Exists(path))
-				{
-					numOfFiles++;
-					if (path.Contains(C_Mcfunction))
-					{
-						numOfFunctions++;
-						linesOfCode += CountLinesOfCode(path);
-					}
-				}
-				else if (Directory.Exists(path))
-				{
-					numOfDirectories++;
-				}
+				CalculateThis(filesAndDir[i]);
+				progess.ReportValue((float)i / filesAndDir.Length, "Calculating Stats");
+				cancellationToken.ThrowIfCancellationRequested();
 			}
+			progess.ReportValue(1.0f, "Calculating Stats");
 		});
 	}
 
+	/// <summary>
+	/// Calculate the stats on a given file path
+	/// </summary>
+	/// <param name="path">File path to check</param>
+	private void CalculateThis(string path)
+	{
+		if (File.Exists(path))
+		{
+			numOfFiles++;
+			if (path.Contains(C_Mcfunction))
+			{
+				numOfFunctions++;
+				linesOfCode += CountLinesOfCode(path);
+			}
+		}
+		else if (Directory.Exists(path))
+		{
+			numOfDirectories++;
+		}
+	}
+
+	/// <summary>
+	/// Counts the lines of non-commented minecraft function code within a file
+	/// </summary>
+	/// <param name="filePath">File to scan for code</param>
+	/// <returns>Number of minecraft code lines within a file</returns>
 	private int CountLinesOfCode(string filePath)
 	{
 		int lineCount = 0;

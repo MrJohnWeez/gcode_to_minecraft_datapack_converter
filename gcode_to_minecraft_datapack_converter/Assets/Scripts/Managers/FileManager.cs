@@ -37,24 +37,36 @@ public class FileManager : MonoBehaviour
 
 	[SerializeField] private TMP_Text _gcodeFilePathText = null;
 	[SerializeField] private TMP_Text _datapackOutputPathText = null;
-	[SerializeField] private Slider _progressBar = null;
-
+	[SerializeField] private Slider _mainProgressBar = null;
+	[SerializeField] private Slider _subProgressBar = null;
+	[SerializeField] private Toggle _computeDatapackStats = null;
+	
 	private string _gcodeFilePath = "";
 	private string _datapackOutputPath = "";
-	public float total = 0;
-	public float progressBarValue = 0;
 	CancellationTokenSource sourceCancel;
+	private int _currentProgress = 0;
+
+	ProgressAmount<float>[] progresses = new ProgressAmount<float>[4]
+	{
+		new ProgressAmount<float>(0),
+		new ProgressAmount<float>(1),
+		new ProgressAmount<float>(2),
+		new ProgressAmount<float>(3)
+	};
 
 	private void Update()
 	{
-		_progressBar.value = progressBarValue;
+		float total = 0;
+		foreach (ProgressAmount<float> pa in progresses)
+			total += pa.Data;
 
-		if(Time.frameCount % 60 == 0)
-			Debug.Log("Test: " + Time.frameCount);
+		_mainProgressBar.value = total;
+		_subProgressBar.value = progresses[_currentProgress].Data;
+
+		if (Time.frameCount % 10 == 0)
+			Debug.Log("Test: " + Time.frameCount + "   Progresses: " + progresses[0].Data + "," + progresses[1].Data + "," + progresses[2].Data + "," + progresses[3].Data);
 	}
-
-	// Add a filesize constraint! 2,500kb or something
-	// Add a option with a warning if the user wants to go over this
+	
 	public void SelectGcodeFile()
 	{
 		string[] gCodePaths = StandaloneFileBrowser.OpenFilePanel("Select Gcode file", "", extensions, false);
@@ -68,46 +80,83 @@ public class FileManager : MonoBehaviour
 		_datapackOutputPathText.text = _datapackOutputPath;
 	}
 
-	// Make progress bar work with async calls
-	// Split progress bar into 2 bars
-	// make array[] of floats and use those all together for the progress bars
+
+
+
+
+
+
+
+	// Start testing actual files
+	// Make the speed slider work
+	// Test will bigger nosile and layer height
+	// Can you auto optimize a gcode file? (every 1mm height)
+	// Migrate progress bars to new canvas
+	// Estimated time remaining
+
+
+
+
+
+
+
+
 	public async void ConvertAndCreateDatapackAsync()
 	{
 		if (File.Exists(_gcodeFilePath) && Directory.Exists(_datapackOutputPath))
 		{
-			progressBarValue = 0;
 			ParsedDataStats dataStats = new ParsedDataStats(_gcodeFilePath, _datapackOutputPath);
 
 			sourceCancel = new CancellationTokenSource();
-			ProgressAmount<float>[] progresses = new ProgressAmount<float>[4]
-			{
-				new ProgressAmount<float>(0),
-				new ProgressAmount<float>(1),
-				new ProgressAmount<float>(2),
-				new ProgressAmount<float>(3)
-			};
-
-			foreach(ProgressAmount<float> pa in progresses)
-				pa.ValueChangedEvent += UpdateProgressBarValue;
-
-			print("Parsing Gcode");
-			dataStats = await GcodeManager.GcodeToParsedPaddedCSV(dataStats, progresses[0], sourceCancel.Token);
-
-			print("Converting to Mcode");
-			dataStats = await GcodeManager.ParsedPaddedCSVToMcodeCSV(dataStats, progresses[1], sourceCancel.Token);
+			_currentProgress = 0;
 			
-			print("Creating Datapack");
-			DatapackManager datapackManager = new DatapackManager();
-			dataStats = await datapackManager.Generate(dataStats, progresses[2], sourceCancel.Token);
+			_mainProgressBar.maxValue = _computeDatapackStats.isOn ? progresses.Length : progresses.Length - 1;
+			foreach (ProgressAmount<float> pa in progresses)
+			{
+				pa.ReportValue(0, "");	// Make sure value is reset
+				pa.ValueChangedEvent += UpdateProgressBarValue;
+			}
 
-			print("Calculating Stats");
-			DatapackStats datapackStats = new DatapackStats();
-			await datapackStats.Calculate(dataStats.datapackPath, progresses[3], sourceCancel.Token);
+			try
+			{
+				dataStats = await GcodeManager.GcodeToParsedPaddedCSV(dataStats, progresses[0], sourceCancel.Token);
+				dataStats = await GcodeManager.ParsedPaddedCSVToMcodeCSV(dataStats, progresses[1], sourceCancel.Token);
+				
+				DatapackManager datapackManager = new DatapackManager();
+				dataStats = await datapackManager.Generate(dataStats, progresses[2], sourceCancel.Token);
+				
+				if(_computeDatapackStats.isOn)
+				{
+					DatapackStats datapackStats = new DatapackStats();
+					await datapackStats.Calculate(dataStats.datapackPath, progresses[3], sourceCancel.Token);
+				}
 
-			File.Delete(dataStats.parsedGcodePath);
-			File.Delete(dataStats.mcodePath);
+				File.Delete(dataStats.parsedGcodePath);
+				File.Delete(dataStats.mcodePath);
 
-			sourceCancel.Dispose();
+				sourceCancel.Dispose();
+			}
+			catch(OperationCanceledException wasCanceled)
+			{
+				if(File.Exists(dataStats.parsedGcodePath))
+					File.Delete(dataStats.parsedGcodePath);
+
+				if (File.Exists(dataStats.mcodePath))
+					File.Delete(dataStats.mcodePath);
+
+				_mainProgressBar.value = 0;
+				_subProgressBar.value = 0;
+
+				if(sourceCancel != null)
+					sourceCancel.Dispose();
+
+				Debug.Log("Datapack generation was canceled!");
+			}
+			catch (ObjectDisposedException wasAreadyCanceled)
+			{
+				Debug.LogError("Objects was already disposed!\n" + wasAreadyCanceled);
+			}
+			
 			foreach (ProgressAmount<float> pa in progresses)
 				pa.ValueChangedEvent -= UpdateProgressBarValue;
 		}
@@ -116,7 +165,18 @@ public class FileManager : MonoBehaviour
 
 	public void UpdateProgressBarValue(ProgressAmount<float> updateAmount)
 	{
-		// Need to make sure we update the correct data value
-		progressBarValue = updateAmount.Data;
+		if(_currentProgress != updateAmount.Id)
+		{
+			_currentProgress = updateAmount.Id;
+		}
+	}
+
+	public void CancelDatapackGeneration()
+	{
+		if(sourceCancel != null && !sourceCancel.IsCancellationRequested)
+		{
+			sourceCancel.Cancel();
+			Debug.Log("CANCELED!!!!");
+		}
 	}
 }

@@ -15,6 +15,7 @@ public class ProgressAmount<T>
 
 	public T Data { get; private set; }
 	public string Message { get; private set; } = "";
+	public string SubMessage { get; private set; } = "";
 	public int Id { get; private set; } = 0;
 
 	public ProgressAmount(int idValue)
@@ -22,10 +23,11 @@ public class ProgressAmount<T>
 		Id = idValue;
 	}
 
-	public void ReportValue(T newValue, string newMessage)
+	public void ReportValue(T newValue, string newMessage, string newSubMessage = "")
 	{
 		Data = newValue;
 		Message = newMessage;
+		SubMessage = newSubMessage;
 		ValueChangedEvent?.Invoke(this);
 	}
 }
