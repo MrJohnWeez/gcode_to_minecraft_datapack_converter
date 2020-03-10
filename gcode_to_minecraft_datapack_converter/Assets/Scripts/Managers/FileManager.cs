@@ -63,8 +63,8 @@ public class FileManager : MonoBehaviour
 		_mainProgressBar.value = total;
 		_subProgressBar.value = progresses[_currentProgress].Data;
 
-		if (Time.frameCount % 10 == 0)
-			Debug.Log("Test: " + Time.frameCount + "   Progresses: " + progresses[0].Data + "," + progresses[1].Data + "," + progresses[2].Data + "," + progresses[3].Data);
+		//if (Time.frameCount % 10 == 0)
+		//	Debug.Log("Test: " + Time.frameCount + "   Progresses: " + progresses[0].Data + "," + progresses[1].Data + "," + progresses[2].Data + "," + progresses[3].Data);
 	}
 	
 	public void SelectGcodeFile()
@@ -88,6 +88,7 @@ public class FileManager : MonoBehaviour
 
 
 	// Start testing actual files
+	// Make it so user can speed up entire process to the max
 	// Make the speed slider work
 	// Test will bigger nosile and layer height
 	// Can you auto optimize a gcode file? (every 1mm height)
@@ -131,8 +132,8 @@ public class FileManager : MonoBehaviour
 					await datapackStats.Calculate(dataStats.datapackPath, progresses[3], sourceCancel.Token);
 				}
 
-				File.Delete(dataStats.parsedGcodePath);
-				File.Delete(dataStats.mcodePath);
+				//File.Delete(dataStats.parsedGcodePath);
+				//File.Delete(dataStats.mcodePath);
 
 				sourceCancel.Dispose();
 			}

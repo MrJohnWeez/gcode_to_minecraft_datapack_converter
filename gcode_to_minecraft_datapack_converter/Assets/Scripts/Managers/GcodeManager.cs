@@ -137,7 +137,11 @@ public static class GcodeManager
 									currentLine = RemoveNonGcode(currentLine);
 									if (!currentLine.IsEmpty())
 									{
-										csvFile.WriteLine(GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats));
+										string g1Code = GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats);
+										if(g1Code.Length >= 10)
+										{
+											csvFile.WriteLine(g1Code);
+										}
 									}
 								}
 							}
