@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 public class DatapackManager
 {
 	#region Constants
-	private const int _numberOfIORetryAttempts = 5;
+	private const int C_numberOfIORetryAttempts = 5;
+	private const int C_LinesPerFunction = 10000; // Muse be lower then 65000ish (command limit within datapack functions)
 
 	// String Constants
 	private const string C_StartFunctionSuffix = "_start";
@@ -152,10 +153,10 @@ public class DatapackManager
 					string templateExecuteLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
 					string templateFinishedLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateFinishedLine));
 
-					int factor = 1000;
-					int factorPow2 = factor * factor;
-					int facotrPow3 = factorPow2 * factor;
-					int lineAmount = totalLines + 2;
+					long factor = C_LinesPerFunction;
+					long factorPow2 = factor * factor;
+					long facotrPow3 = factorPow2 * factor;
+					long lineAmount = totalLines + 2;
 
 					string lvl1Folder = "level1code0_" + (facotrPow3 - 1);
 					string lvl1Root = Path.Combine(_namespaceFunctions, lvl1Folder);
@@ -164,10 +165,8 @@ public class DatapackManager
 					string lvl1ExecuteCode = "";
 					string lvl1UpdateCode = "";
 
-					for (int lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
+					for (long lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
 					{
-
-
 						string lvl2Folder = "level2code" + lvl1 + "_" + (lvl1 + factorPow2 - 1);
 						string lvl2Root = Path.Combine(lvl1Root, lvl2Folder);
 						Directory.CreateDirectory(lvl2Root);
@@ -185,7 +184,7 @@ public class DatapackManager
 						lvl1CurrentUpdateCode = lvl1CurrentUpdateCode.Replace(C_LineNum, DatapackPath(lvl1Folder, lvl2Folder, C_UpdateCodeLineName));
 						lvl1UpdateCode += lvl1CurrentUpdateCode;
 
-						for (int lvl2 = lvl1; lvl2 < lvl1 + 1 * factorPow2 && lvl2 < lineAmount; lvl2 += factor)
+						for (long lvl2 = lvl1; lvl2 < lvl1 + 1 * factorPow2 && lvl2 < lineAmount; lvl2 += factor)
 						{
 							string lvl3ExecuteCode = "";
 							string lvl3UpdateCode = "";
@@ -205,16 +204,20 @@ public class DatapackManager
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum_1, (lvl2) + ".." + (lvl2 + factor));
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum, DatapackPath(localFolderRoot, C_UpdateCodeLineName));
 							lvl2UpdateCode += lvl2CurrentUpdateCode;
-
-							progess.ReportValue(0.15f + ((float)lvl2 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing files");
-							cancellationToken.ThrowIfCancellationRequested();
-
-							for (int lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
+							
+							for (long lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
 							{
 								string filePath = Path.Combine(lvl3Root, C_Line + lvl3 + C_McFunction);
 								string currentLineCode = "";
 								string currentUpdateCode = "";
 								string readData = "";
+
+								// Send progress update every 500 lines processed
+								if(lvl3 % 500 == 0)
+								{
+									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing files");
+									cancellationToken.ThrowIfCancellationRequested();
+								}
 
 								if (!mcodeCSVData.EndOfStream)
 								{
@@ -321,7 +324,7 @@ public class DatapackManager
 	{
 		if (Directory.Exists(folderPath))
 		{
-			string[] files = SafeFileManagement.GetFilesPaths(folderPath, _numberOfIORetryAttempts);
+			string[] files = SafeFileManagement.GetFilesPaths(folderPath, C_numberOfIORetryAttempts);
 			foreach (string file in files)
 			{
 				//print("Updating: " + file);
@@ -363,15 +366,15 @@ public class DatapackManager
 		_printFunctions = Path.Combine(_dataFolderPath, "print", "functions");
 		string templateStart = Path.Combine(_printFunctions, C_TemplateNamespace + C_StartFunctionSuffix + C_McFunction);
 		_datapackStart = Path.Combine(_printFunctions, _datapackUUID + C_StartFunctionSuffix + C_McFunction);
-		if (SafeFileManagement.MoveFile(templateStart, _datapackStart, _numberOfIORetryAttempts))
+		if (SafeFileManagement.MoveFile(templateStart, _datapackStart, C_numberOfIORetryAttempts))
 		{
 			string templateStop = Path.Combine(_printFunctions, C_TemplateNamespace + C_StopFunctionSuffix + C_McFunction);
 			_datapackStop = Path.Combine(_printFunctions, _datapackUUID + C_StopFunctionSuffix + C_McFunction);
-			if (SafeFileManagement.MoveFile(templateStop, _datapackStop, _numberOfIORetryAttempts))
+			if (SafeFileManagement.MoveFile(templateStop, _datapackStop, C_numberOfIORetryAttempts))
 			{
 				string templatePause = Path.Combine(_printFunctions, C_TemplateNamespace + C_PauseFunctionSuffix + C_McFunction);
 				_datapackPause = Path.Combine(_printFunctions, _datapackUUID + C_PauseFunctionSuffix + C_McFunction);
-				SafeFileManagement.MoveFile(templatePause, _datapackPause, _numberOfIORetryAttempts);
+				SafeFileManagement.MoveFile(templatePause, _datapackPause, C_numberOfIORetryAttempts);
 			}
 		}
 	}
@@ -382,18 +385,18 @@ public class DatapackManager
 	private void CopyTemplateAndRename(ParsedDataStats dataStats)
 	{
 		string pathOfDatapackTemplate = Path.Combine(dataStats.unityDataPath, "StreamingAssets", "CopyTemplate");
-		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, _numberOfIORetryAttempts);
+		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, C_numberOfIORetryAttempts);
 
 		// Rename main datapack folder
 		string templateOutput = Path.Combine(_outputRoot, C_TemplateName);
 		_datapackRootPath = Path.Combine(_outputRoot, _datapackName);
-		if (SafeFileManagement.MoveDirectory(templateOutput, _datapackRootPath, _numberOfIORetryAttempts))
+		if (SafeFileManagement.MoveDirectory(templateOutput, _datapackRootPath, C_numberOfIORetryAttempts))
 		{
 			// Rename namespace folder
 			_dataFolderPath = Path.Combine(_datapackRootPath, C_Data);
 			string templateNamespace = Path.Combine(_dataFolderPath, C_TemplateNamespace);
 			_namespacePath = Path.Combine(_dataFolderPath, _datapackUUID);
-			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, _numberOfIORetryAttempts);
+			SafeFileManagement.MoveDirectory(templateNamespace, _namespacePath, C_numberOfIORetryAttempts);
 
 			_namespaceFunctions = Path.Combine(_namespacePath, C_Functions);
 			_datapackMcFuncTags = Path.Combine(_dataFolderPath, C_Minecraft, C_Tags, C_Functions);

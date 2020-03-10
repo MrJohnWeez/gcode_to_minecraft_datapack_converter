@@ -36,6 +36,7 @@ using UnityEngine.UI;
 // -Estimated time remaining
 // -Make folder a zip at the end
 // -Min time to print using datapack
+// -Smart speed, make 
 
 // Upgrade Datapack
 // -Make Start stop pause in chat
