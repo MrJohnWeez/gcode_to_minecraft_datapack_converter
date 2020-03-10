@@ -4,6 +4,8 @@ using UnityEngine;
 using System.IO;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
+
 /// <summary>
 /// Manager responsible for creating all files that make up the Minecraft datapack
 /// </summary>
@@ -79,28 +81,60 @@ public class DatapackManager
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
 
-	public DatapackManager(ref ParsedDataStats dataStats)
+	/// <summary>
+	/// An Async function that generates a minecraft datapack folder when given a parsed data type
+	/// </summary>
+	/// <param name="dataStats">The stats class used when parsing gcode files</param>
+	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
+	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
+	/// <returns>Modified ParsedDataStats type</returns>
+	public Task<ParsedDataStats> Generate(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
-		_gcodeFileName = SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)).ToLower();
-		_dateCreated = SafeFileManagement.GetDateNow();
-		_datapackUUID = _gcodeFileName + "_" + _dateCreated;
-		_datapackName = C_MainDatapackName + "_" + _datapackUUID;
-		_shortUUID = _datapackUUID.FirstLast5();
-		_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
-
-		_outputRoot = SafeFileManagement.FolderPath("Select where datapack will be saved");
-		if (!string.IsNullOrWhiteSpace(_outputRoot))
+		return Task.Run(() =>
 		{
-			CopyTemplateAndRename();
-			dataStats.datapackPath = _datapackRootPath;
-			RenameFiles();
-			UpdateCopiedFiles();
-			WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath);
-		}
+			progess.ReportValue(0.0f, "Generating Datapack Files");
+			_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
+			_dateCreated = SafeFileManagement.GetDateNow();
+			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
+			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
+			_shortUUID = _datapackUUID.FirstLast5();
+			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
+
+			_outputRoot = dataStats.datapackPath;
+			if (!string.IsNullOrWhiteSpace(_outputRoot))
+			{
+				progess.ReportValue(0.05f, "Generating Datapack Files", "Copying Template");
+				CopyTemplateAndRename(dataStats);
+				dataStats.datapackPath = _datapackRootPath;
+
+				progess.ReportValue(0.1f, "Generating Datapack Files", "Renaming Files");
+				RenameFiles();
+
+				progess.ReportValue(0.12f, "Generating Datapack Files", "Update Files");
+				UpdateCopiedFiles();
+
+				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
+				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath, progess, cancellationToken);
+			}
+			progess.ReportValue(1.0f, "Generating Datapack Files");
+			return dataStats;
+		});
 	}
 
 	#region PrivateMembers
-	private void WriteMinecraftCodeFiles(int totalLines, string mcodeCSVFilePath)
+	/// <summary>
+	/// Parse given string and return new string that is mcdatapack allowed
+	/// </summary>
+	/// <param name="name">String to be paresed</param>
+	/// <returns></returns>
+	private string MakeSafeString(string name)
+	{
+		name = name.ToLower();
+		System.Text.RegularExpressions.Regex rgx = new System.Text.RegularExpressions.Regex("[^a-z0-9_-]");
+		return rgx.Replace(name, "");
+	}
+
+	private void WriteMinecraftCodeFiles(int totalLines, string mcodeCSVFilePath, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		if (File.Exists(mcodeCSVFilePath))
 		{
@@ -132,6 +166,8 @@ public class DatapackManager
 
 					for (int lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
 					{
+
+
 						string lvl2Folder = "level2code" + lvl1 + "_" + (lvl1 + factorPow2 - 1);
 						string lvl2Root = Path.Combine(lvl1Root, lvl2Folder);
 						Directory.CreateDirectory(lvl2Root);
@@ -170,6 +206,9 @@ public class DatapackManager
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum, DatapackPath(localFolderRoot, C_UpdateCodeLineName));
 							lvl2UpdateCode += lvl2CurrentUpdateCode;
 
+							progess.ReportValue(0.15f + ((float)lvl2 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing files");
+							cancellationToken.ThrowIfCancellationRequested();
+
 							for (int lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
 							{
 								string filePath = Path.Combine(lvl3Root, C_Line + lvl3 + C_McFunction);
@@ -200,7 +239,7 @@ public class DatapackManager
 									}
 								}
 
-								if(lvl3 == lineAmount - 1)
+								if (lvl3 == lineAmount - 1)
 								{
 									currentLineCode = templateFinishedLine;
 								}
@@ -234,6 +273,14 @@ public class DatapackManager
 					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
 					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
 				}
+			}
+			catch (OperationCanceledException wasCanceled)
+			{
+				throw wasCanceled;
+			}
+			catch (ObjectDisposedException wasAreadyCanceled)
+			{
+				throw wasAreadyCanceled;
 			}
 			catch (Exception e)
 			{ LogError("The gcode file could not be written to", e); }
@@ -332,9 +379,9 @@ public class DatapackManager
 	/// <summary>
 	/// Copy folders and files from datapack tempate then rename folders
 	/// </summary>
-	private void CopyTemplateAndRename()
+	private void CopyTemplateAndRename(ParsedDataStats dataStats)
 	{
-		string pathOfDatapackTemplate = Path.Combine(Application.dataPath, "StreamingAssets", "CopyTemplate");
+		string pathOfDatapackTemplate = Path.Combine(dataStats.unityDataPath, "StreamingAssets", "CopyTemplate");
 		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, _numberOfIORetryAttempts);
 
 		// Rename main datapack folder

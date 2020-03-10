@@ -40,4 +40,14 @@ public static class StringExtensions
 
 		return value;
 	}
+
+	/// <summary>
+	/// Determines if a string is null, empty, or spaces
+	/// </summary>
+	/// <param name="value"></param>
+	/// <returns>True if string is null, empty, or spaces</returns>
+	public static bool IsEmpty(this string value)
+	{
+		return (string.IsNullOrEmpty(value) || string.IsNullOrWhiteSpace(value));
+	}
 }
