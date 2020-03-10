@@ -28,6 +28,27 @@ using UnityEngine.UI;
 //				5,5,200,0,1,0,0
 
 
+
+
+
+// Upgrade Unity program
+// -Migrate progress bars to new canvas
+// -Estimated time remaining
+// -Make folder a zip at the end
+// -Min time to print using datapack
+
+// Upgrade Datapack
+// -Make Start stop pause in chat
+// -Clear all objectives when stop is ran
+// -Make platform better
+// -Animate print head?
+// -Add progress bar
+
+
+
+
+
+
 /// <summary>
 /// Handles gcode -> mcode -> datapack pipeline
 /// </summary>
@@ -39,8 +60,10 @@ public class FileManager : MonoBehaviour
 	[SerializeField] private TMP_Text _datapackOutputPathText = null;
 	[SerializeField] private Slider _mainProgressBar = null;
 	[SerializeField] private Slider _subProgressBar = null;
+	[SerializeField] private Slider _absoluteScalarSlider = null;
 	[SerializeField] private Toggle _computeDatapackStats = null;
-	
+	[SerializeField] private Toggle _realisticPrintSpeed = null;
+
 	private string _gcodeFilePath = "";
 	private string _datapackOutputPath = "";
 	CancellationTokenSource sourceCancel;
@@ -80,33 +103,14 @@ public class FileManager : MonoBehaviour
 		_datapackOutputPathText.text = _datapackOutputPath;
 	}
 
-
-
-
-
-
-
-
-	// Start testing actual files
-	// Make it so user can speed up entire process to the max
-	// Make the speed slider work
-	// Test will bigger nosile and layer height
-	// Can you auto optimize a gcode file? (every 1mm height)
-	// Migrate progress bars to new canvas
-	// Estimated time remaining
-
-
-
-
-
-
-
-
 	public async void ConvertAndCreateDatapackAsync()
 	{
 		if (File.Exists(_gcodeFilePath) && Directory.Exists(_datapackOutputPath))
 		{
 			ParsedDataStats dataStats = new ParsedDataStats(_gcodeFilePath, _datapackOutputPath);
+
+			dataStats.absoluteScalar = _absoluteScalarSlider.value;
+			dataStats.realisticPrintSpeed = _realisticPrintSpeed.isOn;
 
 			sourceCancel = new CancellationTokenSource();
 			_currentProgress = 0;
@@ -132,8 +136,8 @@ public class FileManager : MonoBehaviour
 					await datapackStats.Calculate(dataStats.datapackPath, progresses[3], sourceCancel.Token);
 				}
 
-				//File.Delete(dataStats.parsedGcodePath);
-				//File.Delete(dataStats.mcodePath);
+				File.Delete(dataStats.parsedGcodePath);
+				File.Delete(dataStats.mcodePath);
 
 				sourceCancel.Dispose();
 			}

@@ -64,7 +64,12 @@ public static class GcodeManager
 
 									currData = new LastGcodeValues(currentLine);
 
-									mcodeVals = new McodeValues(prevData, currData, dataStats.maxSpeed);
+									// Use correct scalar type for print speed
+									if(dataStats.realisticPrintSpeed)
+										mcodeVals = new McodeValues(prevData, currData, dataStats.maxSpeed, dataStats.minSpeed);
+									else
+										mcodeVals = new McodeValues(prevData, currData, dataStats.absoluteScalar);
+
 									prevData = currData;
 									mcodeFile.WriteLine(mcodeVals.ToCSVString());
 								}

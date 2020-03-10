@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +8,7 @@ using UnityEngine;
 /// </summary>
 public class McodeValues
 {
+	private static readonly float MinRealisticSpeed = 0.1f;
 	public Vector3 pos = new Vector3();
 	public Vector3 motion = new Vector3();
 	public bool shouldExtrude = false;
@@ -21,16 +23,43 @@ public class McodeValues
 	/// </summary>
 	/// <param name="prevGcodeValues">prv Gcode value struct</param>
 	/// <param name="lastGcodeValues">current Gcode value struct</param>
-	/// <param name="maxMoveSpeed">Limit of the move speed</param>
-	public McodeValues(LastGcodeValues prevGcodeValues, LastGcodeValues lastGcodeValues, in float maxMoveSpeed)
+	/// <param name="maxMoveSpeed">Limit of the max move speed</param>
+	/// <param name="minMoveSpeed">Limit of the min move speed</param>
+	public McodeValues(LastGcodeValues prevGcodeValues, LastGcodeValues lastGcodeValues, float maxMoveSpeed, float minMoveSpeed)
 	{
 		if(prevGcodeValues != null && lastGcodeValues != null)
 		{
 			pos = lastGcodeValues.pos;
 			shouldExtrude = lastGcodeValues.exturedAmount > 0;
 			motion = lastGcodeValues.pos - prevGcodeValues.pos;
-			float newSpeed = Mathf.Clamp(lastGcodeValues.moveSpeed, 0, maxMoveSpeed);
-			motion = motion.normalized * ConvertRange(0, maxMoveSpeed, 0, 1, newSpeed);
+			float newSpeed = Mathf.Clamp(lastGcodeValues.moveSpeed, minMoveSpeed, maxMoveSpeed);
+			motion = motion.normalized * ConvertRange(minMoveSpeed, maxMoveSpeed, MinRealisticSpeed, 1, newSpeed);
+		}
+		else
+		{
+			if (lastGcodeValues != null)
+			{
+				pos = lastGcodeValues.pos;
+				shouldExtrude = lastGcodeValues.exturedAmount > 0;
+				motion = Vector3.zero;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Creates a McodeValue that calculates motion data automatically and controls all motion speed by scalar
+	/// </summary>
+	/// <param name="prevGcodeValues">prv Gcode value struct</param>
+	/// <param name="lastGcodeValues">current Gcode value struct</param>
+	/// <param name="absoluteScalar">The percentage of speed the print will run at in minecraft. 1 = max 20tps</param>
+	public McodeValues(LastGcodeValues prevGcodeValues, LastGcodeValues lastGcodeValues, float absoluteScalar)
+	{
+		if (prevGcodeValues != null && lastGcodeValues != null)
+		{
+			pos = lastGcodeValues.pos;
+			shouldExtrude = lastGcodeValues.exturedAmount > 0;
+			motion = lastGcodeValues.pos - prevGcodeValues.pos;
+			motion = motion.normalized * absoluteScalar;
 		}
 		else
 		{

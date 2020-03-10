@@ -20,6 +20,11 @@ public class ParsedDataStats
 	public float maxSpeed = 0;
 	public int totalMcodeLines = 0;
 
+	// User Settings
+	public float absoluteScalar = 1;
+	public bool realisticPrintSpeed = true;
+
+
 	// File Gen Paths
 	public string gcodePath = "";
 	public string parsedGcodePath = "";
