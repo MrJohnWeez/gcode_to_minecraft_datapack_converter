@@ -1,0 +1,1 @@
+tellraw @a {"text":"[Start]","clickEvent":{"action":"run_command","value":"/function mcode1:init"}}

@@ -1,0 +1,3 @@
+execute at @e[type=minecraft:armor_stand,limit=1,tag=TagNode] if entity @s[distance=..1] at @s run teleport @s ^ ^ ^1 facing entity @e[type=armor_stand,tag=TagNode,limit=1] feet
+execute if score #fakePlayerVar gp_ArgVar004 matches 1 at @s run setblock ~ ~-1 ~ minecraft:FILLBLOCK replace
+execute at @e[type=minecraft:armor_stand,limit=1,tag=TagNode] if entity @s[distance=..1.1] as @s run function mcode1:move_to_next_code

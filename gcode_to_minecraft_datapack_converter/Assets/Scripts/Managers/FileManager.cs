@@ -32,6 +32,8 @@ using UnityEngine.UI;
 
 
 // Upgrade Unity program
+// -Remove the double parsing stuff
+// -Simplify code due to removing all the line generation code
 // -Migrate progress bars to new canvas
 // -Estimated time remaining
 // -Make folder a zip at the end
@@ -39,6 +41,7 @@ using UnityEngine.UI;
 // -Smart speed, make 
 
 // Upgrade Datapack
+// -Make it stop once a print is finished
 // -Make Start stop pause in chat
 // -Clear all objectives when stop is ran
 // -Make platform better
