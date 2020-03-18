@@ -1,5 +1,7 @@
 say mcode1 is printing...
 
+function mcode1:uninstall
+
 scoreboard objectives add gp_ArgVar001 dummy
 scoreboard players set #fakePlayerVar gp_ArgVar001 1
 
@@ -14,8 +16,8 @@ scoreboard players set #fakePlayerVar gp_ArgVar004 0
 
 scoreboard objectives setdisplay sidebar gp_ArgVar002
 
-kill @e[type=minecraft:armor_stand,tag=PrinterArmor]
 function mcode1:clear_print_bed
+function mcode1:create_progress_bar
 
 # Create home node
 summon armor_stand 0 2 0 {DisabledSlots:2039583, Small:1b, Tags:[TagHome,TagPrintGroup,PrinterArmor], NoGravity:1b}

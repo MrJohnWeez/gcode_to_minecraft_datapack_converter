@@ -28,6 +28,8 @@ public class DatapackManager
 	// Template file names
 	private const string C_UpdateCodeLine = "update_code_line.mcfunction";
 	private const string C_ExecuteMcode = "execute_mcode.mcfunction";
+	private const string C_ProgressBar = "create_progress_bar.mcfunction";
+	
 	private const string C_TemplateLineNoFill = "template_line_no_fill.mcfunction";
 	private const string C_TemplateLineWithFill = "template_line_with_fill.mcfunction";
 	private const string C_TemplateUpdateCode = "template_update_code.mcfunction";
@@ -42,6 +44,8 @@ public class DatapackManager
 	private const string C_YNum = "YNUM";
 	private const string C_ZNum = "ZNUM";
 	private const string C_PlaceBlock = "PLACEBLOCK";
+	private const string C_MaxLineNumber = "MAXLINENUMBER";
+
 
 	//Template Names
 	private const string C_TemplateName = "TemplateDatapack";
@@ -116,7 +120,7 @@ public class DatapackManager
 				UpdateCopiedFiles();
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
-				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath, progess, cancellationToken);
+				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
 			}
 			progess.ReportValue(1.0f, "Generating Datapack Files");
 			return dataStats;
@@ -145,7 +149,7 @@ public class DatapackManager
 				using (var mcodeCSVData = new StreamReader(mcodeCSVFilePath))
 				{
 					mcodeCSVData.ReadLine();   // Skip header
-					McodeValues parsedData = null;
+					LastGcodeValues parsedData = null;
 
 					// Get the template file contense
 					string templateUpdateCode = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
@@ -155,7 +159,7 @@ public class DatapackManager
 					long factor = C_LinesPerFunction;
 					long factorPow2 = factor * factor;
 					long facotrPow3 = factorPow2 * factor;
-					long lineAmount = totalLines + 2;
+					long lineAmount = totalLines;
 
 					string lvl1Folder = "level1code0_" + (facotrPow3 - 1);
 					string lvl1Root = Path.Combine(_namespaceFunctions, lvl1Folder);
@@ -197,8 +201,8 @@ public class DatapackManager
 								string currentUpdateCode = "";
 								string readData = "";
 
-								// Send progress update every 500 lines processed
-								if(lvl3 % 500 == 0)
+								// Send progress update every 250 lines processed
+								if(lvl3 % 250 == 0)
 								{
 									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing files");
 									cancellationToken.ThrowIfCancellationRequested();
@@ -207,8 +211,8 @@ public class DatapackManager
 								if (!mcodeCSVData.EndOfStream)
 								{
 									readData = mcodeCSVData.ReadLine();
-									parsedData = new McodeValues(readData);
-
+									parsedData = new LastGcodeValues(readData);
+									
 									// Make sure to add special ending line when the last line is written
 									if (lvl3 != lineAmount - 1)
 									{
@@ -217,7 +221,13 @@ public class DatapackManager
 										currentUpdateCode = currentUpdateCode.Replace(C_XNum, parsedData.pos.x.ToString("F10"));
 										currentUpdateCode = currentUpdateCode.Replace(C_YNum, parsedData.pos.y.ToString("F10"));
 										currentUpdateCode = currentUpdateCode.Replace(C_ZNum, parsedData.pos.z.ToString("F10"));
-										currentUpdateCode = currentUpdateCode.Replace(C_PlaceBlock, (parsedData.shouldExtrude ? "1" : "0"));
+										currentUpdateCode = currentUpdateCode.Replace(C_PlaceBlock, (parsedData.exturedAmount > 0 ? "1" : "0"));
+										lvl3UpdateCode += currentUpdateCode;
+									}
+									else
+									{
+										currentUpdateCode = templateFinishedLine;
+										currentUpdateCode = currentUpdateCode.Replace(C_LineNum, lvl3.ToString() + "..");
 										lvl3UpdateCode += currentUpdateCode;
 									}
 								}
@@ -238,6 +248,11 @@ public class DatapackManager
 
 					// Save strings to files
 					SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine), lvl1UpdateCode);
+
+					// Update bossbar with total number of lines
+					string bossBarContense = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_ProgressBar));
+					bossBarContense = bossBarContense.Replace(C_MaxLineNumber, (lineAmount + 1).ToString());
+					SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_ProgressBar), bossBarContense);
 
 					// Clean up datapack folder templates
 					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));

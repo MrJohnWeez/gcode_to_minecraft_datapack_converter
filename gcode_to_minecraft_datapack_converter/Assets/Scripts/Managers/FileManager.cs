@@ -11,7 +11,7 @@ using UnityEngine.UI;
 
 
 // Pipeline example:
-//	Gcode -> Parsed padded CSV -> mcode CSV -> Datapack
+//	Gcode -> Parsed padded CSV -> Datapack
 //		 Gcode:
 //				;This is a gcode comment
 //				G1 X5 Y5 Z0 E-0.2 F900; wipe and retract
@@ -21,19 +21,12 @@ using UnityEngine.UI;
 //				5,0,5,-0.2,900
 //				5,0,200,0.14,900
 //				5,5,200,-0.14,900
-//		 mcode CSV:   Xcord,Ycord,Zcord,XMotion,YMotion,ZMotion,ShouldExtrude
-//				0,0,0,0,0,0,0
-//				5,0,5,0.7071068,0,0.7071068,0
-//				5,0,200,0,0,1,1
-//				5,5,200,0,1,0,0
 
 
 
 
 
 // Upgrade Unity program
-// -Remove the double parsing stuff
-// -Simplify code due to removing all the line generation code
 // -Migrate progress bars to new canvas
 // -Estimated time remaining
 // -Make folder a zip at the end
@@ -41,15 +34,9 @@ using UnityEngine.UI;
 // -Smart speed, make 
 
 // Upgrade Datapack
-// -Make it stop once a print is finished
-// -Make Start stop pause in chat
-// -Clear all objectives when stop is ran
 // -Make platform better
 // -Animate print head?
 // -Add progress bar
-
-
-
 
 
 
@@ -66,7 +53,6 @@ public class FileManager : MonoBehaviour
 	[SerializeField] private Slider _subProgressBar = null;
 	[SerializeField] private Slider _absoluteScalarSlider = null;
 	[SerializeField] private Toggle _computeDatapackStats = null;
-	[SerializeField] private Toggle _realisticPrintSpeed = null;
 
 	private string _gcodeFilePath = "";
 	private string _datapackOutputPath = "";
@@ -89,9 +75,6 @@ public class FileManager : MonoBehaviour
 
 		_mainProgressBar.value = total;
 		_subProgressBar.value = progresses[_currentProgress].Data;
-
-		//if (Time.frameCount % 10 == 0)
-		//	Debug.Log("Test: " + Time.frameCount + "   Progresses: " + progresses[0].Data + "," + progresses[1].Data + "," + progresses[2].Data + "," + progresses[3].Data);
 	}
 	
 	public void SelectGcodeFile()
@@ -114,7 +97,6 @@ public class FileManager : MonoBehaviour
 			ParsedDataStats dataStats = new ParsedDataStats(_gcodeFilePath, _datapackOutputPath);
 
 			dataStats.absoluteScalar = _absoluteScalarSlider.value;
-			dataStats.realisticPrintSpeed = _realisticPrintSpeed.isOn;
 
 			sourceCancel = new CancellationTokenSource();
 			_currentProgress = 0;
@@ -129,19 +111,19 @@ public class FileManager : MonoBehaviour
 			try
 			{
 				dataStats = await GcodeManager.GcodeToParsedPaddedCSV(dataStats, progresses[0], sourceCancel.Token);
-				dataStats = await GcodeManager.ParsedPaddedCSVToMcodeCSV(dataStats, progresses[1], sourceCancel.Token);
 				
 				DatapackManager datapackManager = new DatapackManager();
-				dataStats = await datapackManager.Generate(dataStats, progresses[2], sourceCancel.Token);
+				dataStats = await datapackManager.Generate(dataStats, progresses[1], sourceCancel.Token);
 				
 				if(_computeDatapackStats.isOn)
 				{
 					DatapackStats datapackStats = new DatapackStats();
-					await datapackStats.Calculate(dataStats.datapackPath, progresses[3], sourceCancel.Token);
+					await datapackStats.Calculate(dataStats.datapackPath, progresses[2], sourceCancel.Token);
+
+					float estimatedPrintTime = await TimeEstimator.CalculateEstimatedTime(dataStats.parsedGcodePath, dataStats.absoluteScalar, progresses[3], sourceCancel.Token);
 				}
 
 				File.Delete(dataStats.parsedGcodePath);
-				File.Delete(dataStats.mcodePath);
 
 				sourceCancel.Dispose();
 			}
@@ -149,9 +131,6 @@ public class FileManager : MonoBehaviour
 			{
 				if(File.Exists(dataStats.parsedGcodePath))
 					File.Delete(dataStats.parsedGcodePath);
-
-				if (File.Exists(dataStats.mcodePath))
-					File.Delete(dataStats.mcodePath);
 
 				_mainProgressBar.value = 0;
 				_subProgressBar.value = 0;

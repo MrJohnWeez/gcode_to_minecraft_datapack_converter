@@ -22,13 +22,10 @@ public class ParsedDataStats
 
 	// User Settings
 	public float absoluteScalar = 1;
-	public bool realisticPrintSpeed = true;
-
 
 	// File Gen Paths
 	public string gcodePath = "";
 	public string parsedGcodePath = "";
-	public string mcodePath = "";
 	public string datapackPath = "";
 
 	// Application Paths
