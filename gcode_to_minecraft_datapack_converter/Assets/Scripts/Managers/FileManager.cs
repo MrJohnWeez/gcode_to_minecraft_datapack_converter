@@ -36,7 +36,6 @@ using UnityEngine.UI;
 // Upgrade Datapack
 // -Make platform better
 // -Animate print head?
-// -Add progress bar
 
 
 

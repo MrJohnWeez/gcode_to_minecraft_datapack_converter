@@ -2840,7 +2840,6 @@ MonoBehaviour:
   _subProgressBar: {fileID: 1494078571}
   _absoluteScalarSlider: {fileID: 2031781661}
   _computeDatapackStats: {fileID: 892188605}
-  _realisticPrintSpeed: {fileID: 0}
 --- !u!1 &1950902332
 GameObject:
   m_ObjectHideFlags: 0
@@ -3095,7 +3094,7 @@ MonoBehaviour:
   m_FillRect: {fileID: 1060483121}
   m_HandleRect: {fileID: 1089174963}
   m_Direction: 0
-  m_MinValue: 0.05
+  m_MinValue: 0.1
   m_MaxValue: 1
   m_WholeNumbers: 0
   m_Value: 1

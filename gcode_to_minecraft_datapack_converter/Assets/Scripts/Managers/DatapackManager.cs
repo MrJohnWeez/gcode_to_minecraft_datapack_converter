@@ -117,7 +117,7 @@ public class DatapackManager
 				RenameFiles();
 
 				progess.ReportValue(0.12f, "Generating Datapack Files", "Update Files");
-				UpdateCopiedFiles();
+				UpdateCopiedFiles(dataStats);
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
 				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
@@ -276,7 +276,7 @@ public class DatapackManager
 	/// <summary>
 	/// Populates the keyVar dictionary with all terms that should be replaced within the copied minecraft files
 	/// </summary>
-	private void InitulizeKeyVars()
+	private void InitulizeKeyVars(ParsedDataStats dataStats)
 	{
 		string scoreboardVar = C_ScoreboardPrefix + _shortUUID;
 		string tag = "Tag" + _datapackUUID;
@@ -289,11 +289,13 @@ public class DatapackManager
 		_keyVars["TagPrintHead"] = tag + "PrintHead";
 		_keyVars["TagNode"] = tag + "Node";
 		_keyVars["FILLBLOCK"] = "stone";
+		_keyVars["PRINTSPEED"] = dataStats.absoluteScalar.ToString();
+		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
 	}
 
-	private void UpdateCopiedFiles()
+	private void UpdateCopiedFiles(ParsedDataStats dataStats)
 	{
-		InitulizeKeyVars();
+		InitulizeKeyVars(dataStats);
 		UpdateAllCopiedFiles(_datapackMcFuncTags);
 		UpdateAllCopiedFiles(_printFunctions);
 		UpdateAllCopiedFiles(_namespaceFunctions);
