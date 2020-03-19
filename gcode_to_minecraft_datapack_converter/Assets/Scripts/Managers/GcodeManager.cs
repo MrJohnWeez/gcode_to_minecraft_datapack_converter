@@ -20,11 +20,11 @@ public static class GcodeManager
 	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
 	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
 	/// <returns>Modified ParsedDataStats type</returns>
-	public static Task<ParsedDataStats> GcodeToParsedPaddedCSV(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	public static Task<DataStats> GcodeToParsedPaddedCSV(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
-			progess.ReportValue(0.0f, "Parsing Gcode");
+			progess.ReportValue(0.0f, "Parsing Gcode", "Reading File");
 			string csvName = "GcodeToParsedPaddedCSV_" + SafeFileManagement.GetDateNow() + ".csv";
 			dataStats.parsedGcodePath = Path.Combine(dataStats.tempFilePath, csvName);
 			
@@ -41,7 +41,7 @@ public static class GcodeManager
 							long gcodeFileLength = gcodeFileInfo.Length;
 							long byteCount = 0;
 
-							LastGcodeValues lastValues = new LastGcodeValues();
+							GcodeStorage lastValues = new GcodeStorage();
 							lastValues.pos = Vector3.zero;
 							lastValues.exturedAmount = 0;
 							lastValues.moveSpeed = 0;
@@ -54,7 +54,7 @@ public static class GcodeManager
 									currentLine = gcodeFile.ReadLine();
 
 									byteCount += System.Text.Encoding.Unicode.GetByteCount(currentLine);
-									progess.ReportValue(byteCount / gcodeFileLength, "Parsing Gcode");
+									progess.ReportValue(byteCount / gcodeFileLength, "Parsing Gcode", "Parsing Lines");
 									cancellationToken.ThrowIfCancellationRequested();
 
 									currentLine = RemoveNonGcode(currentLine);
@@ -84,7 +84,7 @@ public static class GcodeManager
 				catch (Exception e)
 				{ LogError("The csv file could not be written to", e); }
 			}
-			progess.ReportValue(1.0f, "Parsing Gcode");
+			progess.ReportValue(1.0f, "Parsing Gcode", "Closing File");
 			return dataStats;
 		});
 	}
@@ -111,18 +111,20 @@ public static class GcodeManager
 	/// <param name="gcodeLine">gcode to convert</param>
 	/// <param name="lastValues">last gcode values that were converted</param>
 	/// <returns>gcode string as a csv string</returns>
-	private static string GcodeLineToCSVLine(string gcodeLine, ref LastGcodeValues lastValues, ref ParsedDataStats dataStats)
+	private static string GcodeLineToCSVLine(string gcodeLine, ref GcodeStorage lastValues, ref DataStats dataStats)
 	{
 		string parsed = "";
 		string[] sections = gcodeLine.Split(' ');
 
 		if (sections.Length > 0)
 		{
+			dataStats.totalGcodeLines++;
 			string mainCodeTrimmed = sections[0].ToUpper().Trim();
 
 			// Is gcode command a move command
 			if (mainCodeTrimmed.Length == 2 && mainCodeTrimmed[0] == 'G' && mainCodeTrimmed[1] == '1')
 			{
+				dataStats.totalGcodeMoveLines++;
 				for (int term = 1; term < sections.Length; term++)
 				{
 					string termTrimmed = sections[term].ToUpper().Trim();

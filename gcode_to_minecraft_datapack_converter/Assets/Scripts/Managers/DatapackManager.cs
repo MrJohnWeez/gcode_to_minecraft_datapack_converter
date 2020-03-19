@@ -94,20 +94,20 @@ public class DatapackManager
 	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
 	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
 	/// <returns>Modified ParsedDataStats type</returns>
-	public Task<ParsedDataStats> Generate(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	public Task<DataStats> Generate(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
-			progess.ReportValue(0.0f, "Generating Datapack Files");
+			progess.ReportValue(0.0f, "Generating Datapack Files", "Creating file names");
 			_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
 			_dateCreated = SafeFileManagement.GetDateNow();
 			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
 			_shortUUID = _datapackUUID.FirstLast5();
 			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
-
 			_outputRoot = dataStats.datapackPath;
-			if (!string.IsNullOrWhiteSpace(_outputRoot))
+
+			if (!_outputRoot.IsEmpty())
 			{
 				progess.ReportValue(0.05f, "Generating Datapack Files", "Copying Template");
 				CopyTemplateAndRename(dataStats);
@@ -116,7 +116,7 @@ public class DatapackManager
 				progess.ReportValue(0.1f, "Generating Datapack Files", "Renaming Files");
 				RenameFiles();
 
-				progess.ReportValue(0.12f, "Generating Datapack Files", "Update Files");
+				progess.ReportValue(0.12f, "Generating Datapack Files", "Updating Files");
 				UpdateCopiedFiles(dataStats);
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
@@ -149,7 +149,7 @@ public class DatapackManager
 				using (var mcodeCSVData = new StreamReader(mcodeCSVFilePath))
 				{
 					mcodeCSVData.ReadLine();   // Skip header
-					LastGcodeValues parsedData = null;
+					GcodeStorage parsedData = null;
 
 					// Get the template file contense
 					string templateUpdateCode = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
@@ -204,14 +204,14 @@ public class DatapackManager
 								// Send progress update every 250 lines processed
 								if(lvl3 % 250 == 0)
 								{
-									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing files");
+									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing file " + lvl3 + "/" + lineAmount);
 									cancellationToken.ThrowIfCancellationRequested();
 								}
 
 								if (!mcodeCSVData.EndOfStream)
 								{
 									readData = mcodeCSVData.ReadLine();
-									parsedData = new LastGcodeValues(readData);
+									parsedData = new GcodeStorage(readData);
 									
 									// Make sure to add special ending line when the last line is written
 									if (lvl3 != lineAmount - 1)
@@ -246,6 +246,8 @@ public class DatapackManager
 
 					}
 
+					progess.ReportValue(1, "Generating Datapack Files", "Cleaning up temp files");
+
 					// Save strings to files
 					SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine), lvl1UpdateCode);
 
@@ -276,7 +278,7 @@ public class DatapackManager
 	/// <summary>
 	/// Populates the keyVar dictionary with all terms that should be replaced within the copied minecraft files
 	/// </summary>
-	private void InitulizeKeyVars(ParsedDataStats dataStats)
+	private void InitulizeKeyVars(DataStats dataStats)
 	{
 		string scoreboardVar = C_ScoreboardPrefix + _shortUUID;
 		string tag = "Tag" + _datapackUUID;
@@ -293,7 +295,7 @@ public class DatapackManager
 		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
 	}
 
-	private void UpdateCopiedFiles(ParsedDataStats dataStats)
+	private void UpdateCopiedFiles(DataStats dataStats)
 	{
 		InitulizeKeyVars(dataStats);
 		UpdateAllCopiedFiles(_datapackMcFuncTags);
@@ -367,7 +369,7 @@ public class DatapackManager
 	/// <summary>
 	/// Copy folders and files from datapack tempate then rename folders
 	/// </summary>
-	private void CopyTemplateAndRename(ParsedDataStats dataStats)
+	private void CopyTemplateAndRename(DataStats dataStats)
 	{
 		string pathOfDatapackTemplate = Path.Combine(dataStats.unityDataPath, "StreamingAssets", "CopyTemplate");
 		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, C_numberOfIORetryAttempts);

@@ -3,15 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Data type that holds stats about parsed gcode data
+/// Data type that holds stats when generating a gcode -> datapack folder
 /// </summary>
-public class ParsedDataStats
+public class DataStats
 {
-	// Gcode
-	public int totalGcodeLines = 0;
-	public int totalGcodeMoveLines = 0;
-
-	// Mcode
+	// Calculations
 	public Vector3 minPos = new Vector3();
 	public Vector3 maxPos = new Vector3();
 	public float minExtrude = 0;
@@ -19,6 +15,9 @@ public class ParsedDataStats
 	public float minSpeed = 0;
 	public float maxSpeed = 0;
 	public int totalMcodeLines = 0;
+	public float estimatedPrintTime = 0;
+	public int totalGcodeLines = 0;
+	public int totalGcodeMoveLines = 0;
 
 	// User Settings
 	public float absoluteScalar = 1;
@@ -32,7 +31,7 @@ public class ParsedDataStats
 	public string tempFilePath = "";
 	public string unityDataPath = "";
 
-	public ParsedDataStats(string inGcodePath, string inDatapackOutputPath)
+	public DataStats(string inGcodePath, string inDatapackOutputPath)
 	{
 		gcodePath = inGcodePath;
 		datapackPath = inDatapackOutputPath;
@@ -40,7 +39,7 @@ public class ParsedDataStats
 		unityDataPath = Application.dataPath;
 	}
 
-	public ParsedDataStats(string inGcodePath, string inDatapackOutputPath, string inTempFilePath, string indataPath)
+	public DataStats(string inGcodePath, string inDatapackOutputPath, string inTempFilePath, string indataPath)
 	{
 		gcodePath = inGcodePath;
 		datapackPath = inDatapackOutputPath;
