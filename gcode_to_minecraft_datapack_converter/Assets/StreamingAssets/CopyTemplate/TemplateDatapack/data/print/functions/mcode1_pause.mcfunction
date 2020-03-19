@@ -1,2 +1,2 @@
-say toggled pause for mcode1...
 function mcode1:pause
+function mcode1:show_tellraw_options
