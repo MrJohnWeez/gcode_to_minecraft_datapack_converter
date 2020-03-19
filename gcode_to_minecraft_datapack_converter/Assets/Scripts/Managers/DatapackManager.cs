@@ -28,6 +28,8 @@ public class DatapackManager
 	// Template file names
 	private const string C_UpdateCodeLine = "update_code_line.mcfunction";
 	private const string C_ExecuteMcode = "execute_mcode.mcfunction";
+	private const string C_ProgressBar = "create_progress_bar.mcfunction";
+	
 	private const string C_TemplateLineNoFill = "template_line_no_fill.mcfunction";
 	private const string C_TemplateLineWithFill = "template_line_with_fill.mcfunction";
 	private const string C_TemplateUpdateCode = "template_update_code.mcfunction";
@@ -41,6 +43,9 @@ public class DatapackManager
 	private const string C_XNum = "XNUM";
 	private const string C_YNum = "YNUM";
 	private const string C_ZNum = "ZNUM";
+	private const string C_PlaceBlock = "PLACEBLOCK";
+	private const string C_MaxLineNumber = "MAXLINENUMBER";
+
 
 	//Template Names
 	private const string C_TemplateName = "TemplateDatapack";
@@ -89,20 +94,20 @@ public class DatapackManager
 	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
 	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
 	/// <returns>Modified ParsedDataStats type</returns>
-	public Task<ParsedDataStats> Generate(ParsedDataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	public Task<DataStats> Generate(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
-			progess.ReportValue(0.0f, "Generating Datapack Files");
+			progess.ReportValue(0.0f, "Generating Datapack Files", "Creating file names");
 			_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
 			_dateCreated = SafeFileManagement.GetDateNow();
 			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
 			_shortUUID = _datapackUUID.FirstLast5();
 			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
-
 			_outputRoot = dataStats.datapackPath;
-			if (!string.IsNullOrWhiteSpace(_outputRoot))
+
+			if (!_outputRoot.IsEmpty())
 			{
 				progess.ReportValue(0.05f, "Generating Datapack Files", "Copying Template");
 				CopyTemplateAndRename(dataStats);
@@ -111,11 +116,11 @@ public class DatapackManager
 				progess.ReportValue(0.1f, "Generating Datapack Files", "Renaming Files");
 				RenameFiles();
 
-				progess.ReportValue(0.12f, "Generating Datapack Files", "Update Files");
-				UpdateCopiedFiles();
+				progess.ReportValue(0.12f, "Generating Datapack Files", "Updating Files");
+				UpdateCopiedFiles(dataStats);
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
-				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.mcodePath, progess, cancellationToken);
+				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
 			}
 			progess.ReportValue(1.0f, "Generating Datapack Files");
 			return dataStats;
@@ -144,11 +149,9 @@ public class DatapackManager
 				using (var mcodeCSVData = new StreamReader(mcodeCSVFilePath))
 				{
 					mcodeCSVData.ReadLine();   // Skip header
-					McodeValues parsedData = null;
+					GcodeStorage parsedData = null;
 
 					// Get the template file contense
-					string templateLineFill = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateLineWithFill));
-					string templateLineNoFill = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateLineNoFill));
 					string templateUpdateCode = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
 					string templateExecuteLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
 					string templateFinishedLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateFinishedLine));
@@ -156,13 +159,12 @@ public class DatapackManager
 					long factor = C_LinesPerFunction;
 					long factorPow2 = factor * factor;
 					long facotrPow3 = factorPow2 * factor;
-					long lineAmount = totalLines + 2;
+					long lineAmount = totalLines;
 
 					string lvl1Folder = "level1code0_" + (facotrPow3 - 1);
 					string lvl1Root = Path.Combine(_namespaceFunctions, lvl1Folder);
 					Directory.CreateDirectory(lvl1Root);
-
-					string lvl1ExecuteCode = "";
+					
 					string lvl1UpdateCode = "";
 
 					for (long lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
@@ -170,14 +172,8 @@ public class DatapackManager
 						string lvl2Folder = "level2code" + lvl1 + "_" + (lvl1 + factorPow2 - 1);
 						string lvl2Root = Path.Combine(lvl1Root, lvl2Folder);
 						Directory.CreateDirectory(lvl2Root);
-
-						string lvl2ExecuteCode = "";
+						
 						string lvl2UpdateCode = "";
-
-						string lvl1CurrentExecute = templateExecuteLine;
-						lvl1CurrentExecute = lvl1CurrentExecute.Replace(C_LineNum_1, lvl1 + ".." + (lvl1 + factorPow2 - 1));
-						lvl1CurrentExecute = lvl1CurrentExecute.Replace(C_LineNum, DatapackPath(lvl1Folder, lvl2Folder, C_ExecuteMcodeName));
-						lvl1ExecuteCode += lvl1CurrentExecute;
 
 						string lvl1CurrentUpdateCode = templateExecuteLine;
 						lvl1CurrentUpdateCode = lvl1CurrentUpdateCode.Replace(C_LineNum_1, (lvl1) + ".." + (lvl1 + factorPow2));
@@ -186,7 +182,6 @@ public class DatapackManager
 
 						for (long lvl2 = lvl1; lvl2 < lvl1 + 1 * factorPow2 && lvl2 < lineAmount; lvl2 += factor)
 						{
-							string lvl3ExecuteCode = "";
 							string lvl3UpdateCode = "";
 
 							string lvl3Folder = "level3code" + lvl2 + "_" + (lvl2 + factor - 1);
@@ -194,11 +189,6 @@ public class DatapackManager
 							string localFolderRoot = DatapackPath(lvl1Folder, lvl2Folder, lvl3Folder);
 
 							Directory.CreateDirectory(lvl3Root);
-
-							string lvl2CurrentExecute = templateExecuteLine;
-							lvl2CurrentExecute = lvl2CurrentExecute.Replace(C_LineNum_1, lvl2 + ".." + (lvl2 + factor - 1));
-							lvl2CurrentExecute = lvl2CurrentExecute.Replace(C_LineNum, DatapackPath(localFolderRoot, C_ExecuteMcodeName));
-							lvl2ExecuteCode += lvl2CurrentExecute;
 
 							string lvl2CurrentUpdateCode = templateExecuteLine;
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum_1, (lvl2) + ".." + (lvl2 + factor));
@@ -208,73 +198,68 @@ public class DatapackManager
 							for (long lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
 							{
 								string filePath = Path.Combine(lvl3Root, C_Line + lvl3 + C_McFunction);
-								string currentLineCode = "";
 								string currentUpdateCode = "";
 								string readData = "";
 
-								// Send progress update every 500 lines processed
-								if(lvl3 % 500 == 0)
+								// Send progress update every 250 lines processed
+								if(lvl3 % 250 == 0)
 								{
-									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing files");
+									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing file " + lvl3 + "/" + lineAmount);
 									cancellationToken.ThrowIfCancellationRequested();
 								}
 
 								if (!mcodeCSVData.EndOfStream)
 								{
 									readData = mcodeCSVData.ReadLine();
-									parsedData = new McodeValues(readData);
-
+									parsedData = new GcodeStorage(readData);
+									
 									// Make sure to add special ending line when the last line is written
 									if (lvl3 != lineAmount - 1)
 									{
-										currentLineCode = parsedData.shouldExtrude ? templateLineFill : templateLineNoFill;
-										currentLineCode = currentLineCode.Replace(C_XNum, parsedData.motion.x.ToString("F10"));
-										currentLineCode = currentLineCode.Replace(C_YNum, parsedData.motion.y.ToString("F10"));
-										currentLineCode = currentLineCode.Replace(C_ZNum, parsedData.motion.z.ToString("F10"));
-										currentLineCode = currentLineCode.Replace(C_FillBlock, "stone");
-
 										currentUpdateCode = templateUpdateCode;
 										currentUpdateCode = currentUpdateCode.Replace(C_LineNum, (lvl3).ToString());
 										currentUpdateCode = currentUpdateCode.Replace(C_XNum, parsedData.pos.x.ToString("F10"));
 										currentUpdateCode = currentUpdateCode.Replace(C_YNum, parsedData.pos.y.ToString("F10"));
 										currentUpdateCode = currentUpdateCode.Replace(C_ZNum, parsedData.pos.z.ToString("F10"));
+										currentUpdateCode = currentUpdateCode.Replace(C_PlaceBlock, (parsedData.exturedAmount > 0 ? "1" : "0"));
+										lvl3UpdateCode += currentUpdateCode;
+									}
+									else
+									{
+										currentUpdateCode = templateFinishedLine;
+										currentUpdateCode = currentUpdateCode.Replace(C_LineNum, lvl3.ToString() + "..");
 										lvl3UpdateCode += currentUpdateCode;
 									}
 								}
 
-								if (lvl3 == lineAmount - 1)
-								{
-									currentLineCode = templateFinishedLine;
-								}
-
-								SafeFileManagement.SetFileContents(filePath, currentLineCode);
-
 								string currentExecute = templateExecuteLine;
 								currentExecute = currentExecute.Replace(C_LineNum_1, (lvl3).ToString());
 								currentExecute = currentExecute.Replace(C_LineNum, DatapackPath(localFolderRoot, C_Line + (lvl3)));
-								lvl3ExecuteCode += currentExecute;
 							}
 
 							// Save strings to files
-							SafeFileManagement.SetFileContents(Path.Combine(lvl3Root, C_ExecuteMcode), lvl3ExecuteCode);
 							SafeFileManagement.SetFileContents(Path.Combine(lvl3Root, C_UpdateCodeLine), lvl3UpdateCode);
 						}
 
 						// Save strings to files
-						SafeFileManagement.SetFileContents(Path.Combine(lvl2Root, C_ExecuteMcode), lvl2ExecuteCode);
 						SafeFileManagement.SetFileContents(Path.Combine(lvl2Root, C_UpdateCodeLine), lvl2UpdateCode);
 
 					}
 
+					progess.ReportValue(1, "Generating Datapack Files", "Cleaning up temp files");
+
 					// Save strings to files
-					SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_ExecuteMcode), lvl1ExecuteCode);
 					SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_UpdateCodeLine), lvl1UpdateCode);
 
+					// Update bossbar with total number of lines
+					string bossBarContense = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_ProgressBar));
+					bossBarContense = bossBarContense.Replace(C_MaxLineNumber, (lineAmount + 1).ToString());
+					SafeFileManagement.SetFileContents(Path.Combine(_namespaceFunctions, C_ProgressBar), bossBarContense);
+
 					// Clean up datapack folder templates
-					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateLineWithFill));
-					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateLineNoFill));
 					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
 					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
+					SafeFileManagement.DeleteFile(Path.Combine(_namespaceFunctions, C_TemplateFinishedLine));
 				}
 			}
 			catch (OperationCanceledException wasCanceled)
@@ -293,24 +278,26 @@ public class DatapackManager
 	/// <summary>
 	/// Populates the keyVar dictionary with all terms that should be replaced within the copied minecraft files
 	/// </summary>
-	private void InitulizeKeyVars()
+	private void InitulizeKeyVars(DataStats dataStats)
 	{
 		string scoreboardVar = C_ScoreboardPrefix + _shortUUID;
 		string tag = "Tag" + _datapackUUID;
 		_keyVars[C_TemplateNamespace] = _datapackUUID;
-		_keyVars["gp_ArgVar001"] = scoreboardVar + "001";
-		_keyVars["gp_ArgVar002"] = scoreboardVar + "002";
+		_keyVars["gp_ArgVar"] = scoreboardVar;
 		_keyVars["#fakePlayerVar"] = _fakePlayerName;
 		_keyVars["TagPrintGroup"] = tag + "PrintGroup";
 		_keyVars["TagCenterPoint"] = tag + "CenterPoint";
 		_keyVars["TagHome"] = tag + "Home";
 		_keyVars["TagPrintHead"] = tag + "PrintHead";
 		_keyVars["TagNode"] = tag + "Node";
+		_keyVars["FILLBLOCK"] = "stone";
+		_keyVars["PRINTSPEED"] = dataStats.absoluteScalar.ToString();
+		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
 	}
 
-	private void UpdateCopiedFiles()
+	private void UpdateCopiedFiles(DataStats dataStats)
 	{
-		InitulizeKeyVars();
+		InitulizeKeyVars(dataStats);
 		UpdateAllCopiedFiles(_datapackMcFuncTags);
 		UpdateAllCopiedFiles(_printFunctions);
 		UpdateAllCopiedFiles(_namespaceFunctions);
@@ -382,7 +369,7 @@ public class DatapackManager
 	/// <summary>
 	/// Copy folders and files from datapack tempate then rename folders
 	/// </summary>
-	private void CopyTemplateAndRename(ParsedDataStats dataStats)
+	private void CopyTemplateAndRename(DataStats dataStats)
 	{
 		string pathOfDatapackTemplate = Path.Combine(dataStats.unityDataPath, "StreamingAssets", "CopyTemplate");
 		SafeFileManagement.DirectoryCopy(pathOfDatapackTemplate, _outputRoot, true, _excludeExtensions, C_numberOfIORetryAttempts);

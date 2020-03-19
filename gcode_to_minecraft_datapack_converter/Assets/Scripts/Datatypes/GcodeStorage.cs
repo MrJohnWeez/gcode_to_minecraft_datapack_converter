@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Class used to track the previous updated gcode terms
+/// Class used to store gcode commands into datatypes
 /// </summary>
-public class LastGcodeValues
+public class GcodeStorage
 {
 	public Vector3 pos = Vector3.zero;
 	public float exturedAmount = 0;
 	public float moveSpeed = 0;
 
-	public LastGcodeValues()
+	public GcodeStorage()
 	{
 
 	}
@@ -20,7 +20,7 @@ public class LastGcodeValues
 	/// Converts a csv string to this data type struct
 	/// </summary>
 	/// <param name="lastGcodeValuesAsCSV">The string of csv terms</param>
-	public LastGcodeValues(string lastGcodeValuesAsCSV)
+	public GcodeStorage(string lastGcodeValuesAsCSV)
 	{
 		string[] sections = lastGcodeValuesAsCSV.Split(',');
 		if (sections.Length >= 5)
