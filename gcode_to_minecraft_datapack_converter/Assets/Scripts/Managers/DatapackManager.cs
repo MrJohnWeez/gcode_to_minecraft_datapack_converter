@@ -15,6 +15,12 @@ public class DatapackManager
 	private const int C_numberOfIORetryAttempts = 5;
 	private const int C_LinesPerFunction = 10000; // Muse be lower then 65000ish (command limit within datapack functions)
 
+	// Minecraft blocks
+	private const string C_BlockType = "stone";
+	private const string C_BlockAir = "air";
+	private const string C_PrintBedBlock = "black_concrete";
+	private const string C_GuideLinesBlock = "white_concrete";
+
 	// String Constants
 	private const string C_StartFunctionSuffix = "_start";
 	private const string C_StopFunctionSuffix = "_stop";
@@ -25,12 +31,13 @@ public class DatapackManager
 	private const string C_MainDatapackName = "GcodePrinter";
 	private const string C_UpdateCodeLineName = "update_code_line";
 	private const string C_ExecuteMcodeName = "execute_mcode";
+	private const string C_ClearPrintBedPrefix = "clear_print_bed";
 
 	// Template file names
 	private const string C_UpdateCodeLine = "update_code_line.mcfunction";
 	private const string C_ExecuteMcode = "execute_mcode.mcfunction";
 	private const string C_ProgressBar = "create_progress_bar.mcfunction";
-	
+
 	private const string C_TemplateLineNoFill = "template_line_no_fill.mcfunction";
 	private const string C_TemplateLineWithFill = "template_line_with_fill.mcfunction";
 	private const string C_TemplateUpdateCode = "template_update_code.mcfunction";
@@ -122,6 +129,8 @@ public class DatapackManager
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
 				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
+
+				GeneratePrintBed(dataStats);
 			}
 			progess.ReportValue(1.0f, "Generating Datapack Files");
 			return dataStats;
@@ -139,6 +148,41 @@ public class DatapackManager
 		name = name.ToLower();
 		System.Text.RegularExpressions.Regex rgx = new System.Text.RegularExpressions.Regex("[^a-z0-9_-]");
 		return rgx.Replace(name, "");
+	}
+
+	/// <summary>
+	/// Generate the minecraft code to make the printbed (will be dynamic in the future)
+	/// </summary>
+	/// <param name="dataStats">The stats class used when parsing gcode files</param>
+	private void GeneratePrintBed(DataStats dataStats)
+	{
+		string commands = "";
+
+		// Clear and place bed
+		for (int x = -8; x <= 256; x += 8)
+		{
+			for (int z = -8; z <= 256; z += 16)
+			{
+				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 250 " + (z + 15).ToString() + " minecraft:" + C_BlockAir + " replace\n";
+				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 0 " + (z + 15).ToString() + " minecraft:" + C_PrintBedBlock + " replace\n";
+			}
+		}
+		
+		commands += "fill 0 0 0 0 0 256 minecraft:" + C_GuideLinesBlock + " replace\n"; //Front
+		commands += "fill 0 0 0 256 0 0 minecraft:" + C_GuideLinesBlock + " replace\n"; //Left
+		commands += "fill 256 0 256 256 0 0 minecraft:" + C_GuideLinesBlock + " replace\n"; //Back
+		commands += "fill 256 0 256 0 0 256 minecraft:" + C_GuideLinesBlock + " replace\n"; //Right
+
+		for (int x = 0; x <= 256; x += 16)
+		{
+			for (int z = 0; z <= 256; z += 16)
+			{
+				commands += "setblock " + x.ToString() + " 0 " + z.ToString() + " minecraft:" + C_GuideLinesBlock + " replace\n";
+			}
+		}
+
+		string filePath = Path.Combine(_namespaceFunctions, C_ClearPrintBedPrefix + C_McFunction);
+		SafeFileManagement.SetFileContents(filePath, commands);
 	}
 
 	private void WriteMinecraftCodeFiles(int totalLines, string mcodeCSVFilePath, ProgressAmount<float> progess, CancellationToken cancellationToken)
@@ -165,7 +209,7 @@ public class DatapackManager
 					string lvl1Folder = "level1code0_" + (facotrPow3 - 1);
 					string lvl1Root = Path.Combine(_namespaceFunctions, lvl1Folder);
 					Directory.CreateDirectory(lvl1Root);
-					
+
 					string lvl1UpdateCode = "";
 
 					for (long lvl1 = 0; lvl1 < facotrPow3 && lvl1 < lineAmount; lvl1 += factorPow2)
@@ -173,7 +217,7 @@ public class DatapackManager
 						string lvl2Folder = "level2code" + lvl1 + "_" + (lvl1 + factorPow2 - 1);
 						string lvl2Root = Path.Combine(lvl1Root, lvl2Folder);
 						Directory.CreateDirectory(lvl2Root);
-						
+
 						string lvl2UpdateCode = "";
 
 						string lvl1CurrentUpdateCode = templateExecuteLine;
@@ -195,7 +239,7 @@ public class DatapackManager
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum_1, (lvl2) + ".." + (lvl2 + factor));
 							lvl2CurrentUpdateCode = lvl2CurrentUpdateCode.Replace(C_LineNum, DatapackPath(localFolderRoot, C_UpdateCodeLineName));
 							lvl2UpdateCode += lvl2CurrentUpdateCode;
-							
+
 							for (long lvl3 = lvl2; lvl3 < lvl2 + 1 * factor && lvl3 < lineAmount; lvl3++)
 							{
 								string filePath = Path.Combine(lvl3Root, C_Line + lvl3 + C_McFunction);
@@ -203,7 +247,7 @@ public class DatapackManager
 								string readData = "";
 
 								// Send progress update every 250 lines processed
-								if(lvl3 % 250 == 0)
+								if (lvl3 % 250 == 0)
 								{
 									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing file " + lvl3 + "/" + lineAmount);
 									cancellationToken.ThrowIfCancellationRequested();
@@ -213,7 +257,7 @@ public class DatapackManager
 								{
 									readData = mcodeCSVData.ReadLine();
 									parsedData = new GcodeStorage(readData);
-									
+
 									// Make sure to add special ending line when the last line is written
 									if (lvl3 != lineAmount - 1)
 									{
@@ -287,7 +331,7 @@ public class DatapackManager
 		_keyVars["gp_ArgVar"] = scoreboardVar;
 		_keyVars["#fakePlayerVar"] = _fakePlayerName;
 		_keyVars["TAGG"] = tag;
-		_keyVars["FILLBLOCK"] = "stone";
+		_keyVars["FILLBLOCK"] = C_BlockType;
 		_keyVars["PRINTSPEED"] = dataStats.absoluteScalar.ToString();
 		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
 	}
@@ -358,7 +402,7 @@ public class DatapackManager
 			{
 				string templatePause = Path.Combine(_printFunctions, C_TemplateNamespace + C_PauseFunctionSuffix + C_McFunction);
 				_datapackPause = Path.Combine(_printFunctions, _datapackUUID + C_PauseFunctionSuffix + C_McFunction);
-				if(SafeFileManagement.MoveFile(templatePause, _datapackPause, C_numberOfIORetryAttempts))
+				if (SafeFileManagement.MoveFile(templatePause, _datapackPause, C_numberOfIORetryAttempts))
 				{
 					string templateOptions = Path.Combine(_printFunctions, C_TemplateNamespace + C_OptionsFunctionSuffix + C_McFunction);
 					string _datapackOptions = Path.Combine(_printFunctions, _datapackUUID + C_OptionsFunctionSuffix + C_McFunction);
