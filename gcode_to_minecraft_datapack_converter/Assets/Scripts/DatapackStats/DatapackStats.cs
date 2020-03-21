@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Runs calculations on a datapack folder
+/// Runs calculations on a given Minecraft datapack folder
 /// </summary>
 public class DatapackStats
 {
@@ -19,20 +19,27 @@ public class DatapackStats
 	public int numOfDirectories = 0;
 	public string datapackPath = "";
 
+	/// <summary>
+	/// Calculate a variety of stats based on the given datapack
+	/// </summary>
+	/// <param name="datapackRootPath">Directory path to a Minecraft datapack</param>
+	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
+	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
+	/// <returns></returns>
 	public Task Calculate(string datapackRootPath, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
-			progess.ReportValue(0.0f, "Calculating Stats");
+			progess.ReportValue(0.0f, "Calculating Stats", "Scaning sub-folders");
 			datapackPath = datapackRootPath;
 			string[] filesAndDir = Directory.GetFileSystemEntries(datapackPath, "*", SearchOption.AllDirectories);
 			for (int i = 0; i < filesAndDir.Length; i++)
 			{
 				CalculateThis(filesAndDir[i]);
-				progess.ReportValue((float)i / filesAndDir.Length, "Calculating Stats");
+				progess.ReportValue((float)i / filesAndDir.Length, "Calculating Stats", "Scanning file " + i + "/" + filesAndDir.Length);
 				cancellationToken.ThrowIfCancellationRequested();
 			}
-			progess.ReportValue(1.0f, "Calculating Stats");
+			progess.ReportValue(1.0f, "Calculating Stats", "Finished");
 		});
 	}
 
