@@ -1,2 +1,2 @@
-execute if score #fakePlayerVar gp_ArgVar002 matches LINENUM as @s run execute at @e[type=armor_stand,tag=TagHome,limit=1] run tp @e[type=minecraft:armor_stand,limit=1,tag=TagNode] ~XNUM ~YNUM ~ZNUM
+execute if score #fakePlayerVar gp_ArgVar002 matches LINENUM as @s run execute at @e[type=armor_stand,tag=TAGGHome,limit=1] run tp @e[type=minecraft:armor_stand,limit=1,tag=TAGGNode] ~XNUM ~YNUM ~ZNUM
 execute if score #fakePlayerVar gp_ArgVar002 matches LINENUM run scoreboard players set #fakePlayerVar gp_ArgVar004 PLACEBLOCK

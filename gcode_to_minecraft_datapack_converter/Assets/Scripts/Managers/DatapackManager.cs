@@ -19,6 +19,7 @@ public class DatapackManager
 	private const string C_StartFunctionSuffix = "_start";
 	private const string C_StopFunctionSuffix = "_stop";
 	private const string C_PauseFunctionSuffix = "_pause";
+	private const string C_OptionsFunctionSuffix = "_options";
 	private const string C_ScoreboardPrefix = "gp_";
 	private const string C_Line = "line";
 	private const string C_MainDatapackName = "GcodePrinter";
@@ -285,11 +286,7 @@ public class DatapackManager
 		_keyVars[C_TemplateNamespace] = _datapackUUID;
 		_keyVars["gp_ArgVar"] = scoreboardVar;
 		_keyVars["#fakePlayerVar"] = _fakePlayerName;
-		_keyVars["TagPrintGroup"] = tag + "PrintGroup";
-		_keyVars["TagCenterPoint"] = tag + "CenterPoint";
-		_keyVars["TagHome"] = tag + "Home";
-		_keyVars["TagPrintHead"] = tag + "PrintHead";
-		_keyVars["TagNode"] = tag + "Node";
+		_keyVars["TAGG"] = tag;
 		_keyVars["FILLBLOCK"] = "stone";
 		_keyVars["PRINTSPEED"] = dataStats.absoluteScalar.ToString();
 		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
@@ -346,7 +343,7 @@ public class DatapackManager
 	}
 
 	/// <summary>
-	/// Rename the start, pause, and stop files
+	/// Rename the start, pause, stop, and options files
 	/// </summary>
 	private void RenameFiles()
 	{
@@ -361,7 +358,12 @@ public class DatapackManager
 			{
 				string templatePause = Path.Combine(_printFunctions, C_TemplateNamespace + C_PauseFunctionSuffix + C_McFunction);
 				_datapackPause = Path.Combine(_printFunctions, _datapackUUID + C_PauseFunctionSuffix + C_McFunction);
-				SafeFileManagement.MoveFile(templatePause, _datapackPause, C_numberOfIORetryAttempts);
+				if(SafeFileManagement.MoveFile(templatePause, _datapackPause, C_numberOfIORetryAttempts))
+				{
+					string templateOptions = Path.Combine(_printFunctions, C_TemplateNamespace + C_OptionsFunctionSuffix + C_McFunction);
+					string _datapackOptions = Path.Combine(_printFunctions, _datapackUUID + C_OptionsFunctionSuffix + C_McFunction);
+					SafeFileManagement.MoveFile(templateOptions, _datapackOptions, C_numberOfIORetryAttempts);
+				}
 			}
 		}
 	}
