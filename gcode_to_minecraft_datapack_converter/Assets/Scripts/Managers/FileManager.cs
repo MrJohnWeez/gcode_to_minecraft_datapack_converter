@@ -49,6 +49,8 @@ public class FileManager : MonoBehaviour
 	public ProgressTracker progressTrackerPrefab = null;
 	[SerializeField] private StatsManager _statsManager = null;
 	[SerializeField] private DropdownManager _dropDownManager = null;
+	[SerializeField] private ValidateInput _validateInput = null;
+
 
 	private string _gcodeFilePath = "";
 	private string _datapackOutputPath = "";
@@ -133,6 +135,7 @@ public class FileManager : MonoBehaviour
 			dataStats.absoluteScalar = _absoluteScalarSlider.value;
 			dataStats.printMaterial = _dropDownManager.GetPrintMaterial();
 			dataStats.printBedMaterial = _dropDownManager.GetPrintBedMaterial();
+			dataStats.datapackName = _validateInput.GetInput();
 
 			sourceCancel = new CancellationTokenSource();
 			_currentProgress = 0;

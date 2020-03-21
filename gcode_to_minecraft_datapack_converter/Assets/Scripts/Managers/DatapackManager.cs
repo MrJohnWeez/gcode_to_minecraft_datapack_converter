@@ -19,25 +19,26 @@ public class DatapackManager
 	private const string C_BlockAir = "air";
 	private const string C_GuideLinesBlock = "white_concrete";
 
-	// String Constants
+	// Prefix and Suffix
 	private const string C_StartFunctionSuffix = "_start";
 	private const string C_StopFunctionSuffix = "_stop";
 	private const string C_PauseFunctionSuffix = "_pause";
 	private const string C_OptionsFunctionSuffix = "_options";
 	private const string C_ScoreboardPrefix = "gp_";
+
+
 	private const string C_Line = "line";
 	private const string C_MainDatapackName = "GcodePrinter";
+
+	// Function names
 	private const string C_UpdateCodeLineName = "update_code_line";
-	private const string C_ExecuteMcodeName = "execute_mcode";
 	private const string C_ClearPrintBedPrefix = "clear_print_bed";
 
 	// Template file names
 	private const string C_UpdateCodeLine = "update_code_line.mcfunction";
 	private const string C_ExecuteMcode = "execute_mcode.mcfunction";
 	private const string C_ProgressBar = "create_progress_bar.mcfunction";
-
-	private const string C_TemplateLineNoFill = "template_line_no_fill.mcfunction";
-	private const string C_TemplateLineWithFill = "template_line_with_fill.mcfunction";
+	
 	private const string C_TemplateUpdateCode = "template_update_code.mcfunction";
 	private const string C_TemplateExecuteLine = "template_execute_line.mcfunction";
 	private const string C_TemplateFinishedLine = "template_finished_code.mcfunction";
@@ -51,7 +52,6 @@ public class DatapackManager
 	private const string C_ZNum = "ZNUM";
 	private const string C_PlaceBlock = "PLACEBLOCK";
 	private const string C_MaxLineNumber = "MAXLINENUMBER";
-
 
 	//Template Names
 	private const string C_TemplateName = "TemplateDatapack";
@@ -107,9 +107,21 @@ public class DatapackManager
 			progess.ReportValue(0.0f, "Generating Datapack Files", "Creating file names");
 			_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
 			_dateCreated = SafeFileManagement.GetDateNow();
-			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
-			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
-			dataStats.datapackName = _datapackName;
+			
+
+			// Use default name if custom name is empty
+			if(dataStats.datapackName.IsEmpty())
+			{
+				_datapackUUID = _gcodeFileName + "_" + _dateCreated;
+				_datapackName = C_MainDatapackName + "_" + _datapackUUID;
+				dataStats.datapackName = _datapackName;
+			}
+			else
+			{
+				_datapackUUID = dataStats.datapackName;
+				_datapackName = dataStats.datapackName;
+			}
+			
 			_shortUUID = _datapackUUID.FirstLast5();
 			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
 			_outputRoot = dataStats.datapackPath;
@@ -450,20 +462,6 @@ public class DatapackManager
 		return newString.TrimEnd(newString[newString.Length - 1]);
 
 	}
-	/// <summary>
-	/// Prints all vars to unity console
-	/// </summary>
-	private void LogDynamicVars()
-	{
-		Debug.Log("_gcodeFilePath: " + _gcodeFilePath + " \n" +
-			"_gcodeFileName: " + _gcodeFileName + "\n" +
-			"_dateCreated: " + _dateCreated + "\n" +
-			"_datapackUUID: " + _datapackUUID + "\n" +
-			"_datapackName: " + _datapackName + "\n" +
-			"_shortName: " + _shortUUID + "\n" +
-			"_fakePlayerName: " + _fakePlayerName);
-	}
-
 
 	private void LogError(string text, Exception error)
 	{
