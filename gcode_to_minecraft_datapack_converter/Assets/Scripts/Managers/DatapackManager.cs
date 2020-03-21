@@ -16,9 +16,7 @@ public class DatapackManager
 	private const int C_LinesPerFunction = 10000; // Muse be lower then 65000ish (command limit within datapack functions)
 
 	// Minecraft blocks
-	private const string C_BlockType = "stone";
 	private const string C_BlockAir = "air";
-	private const string C_PrintBedBlock = "black_concrete";
 	private const string C_GuideLinesBlock = "white_concrete";
 
 	// String Constants
@@ -102,7 +100,7 @@ public class DatapackManager
 	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
 	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
 	/// <returns>Modified ParsedDataStats type</returns>
-	public Task<DataStats> Generate(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	public Task<DataStats> GenerateAsync(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
@@ -111,6 +109,7 @@ public class DatapackManager
 			_dateCreated = SafeFileManagement.GetDateNow();
 			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
 			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
+			dataStats.datapackName = _datapackName;
 			_shortUUID = _datapackUUID.FirstLast5();
 			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
 			_outputRoot = dataStats.datapackPath;
@@ -128,7 +127,7 @@ public class DatapackManager
 				UpdateCopiedFiles(dataStats);
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
-				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
+				WriteMinecraftCodeFilesAsync(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
 
 				GeneratePrintBed(dataStats);
 			}
@@ -164,7 +163,7 @@ public class DatapackManager
 			for (int z = -8; z <= 256; z += 16)
 			{
 				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 250 " + (z + 15).ToString() + " minecraft:" + C_BlockAir + " replace\n";
-				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 0 " + (z + 15).ToString() + " minecraft:" + C_PrintBedBlock + " replace\n";
+				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 0 " + (z + 15).ToString() + " minecraft:" + dataStats.printBedMaterial + " replace\n";
 			}
 		}
 		
@@ -185,7 +184,7 @@ public class DatapackManager
 		SafeFileManagement.SetFileContents(filePath, commands);
 	}
 
-	private void WriteMinecraftCodeFiles(int totalLines, string mcodeCSVFilePath, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	private void WriteMinecraftCodeFilesAsync(int totalLines, string mcodeCSVFilePath, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		if (File.Exists(mcodeCSVFilePath))
 		{
@@ -331,7 +330,7 @@ public class DatapackManager
 		_keyVars["gp_ArgVar"] = scoreboardVar;
 		_keyVars["#fakePlayerVar"] = _fakePlayerName;
 		_keyVars["TAGG"] = tag;
-		_keyVars["FILLBLOCK"] = C_BlockType;
+		_keyVars["FILLBLOCK"] = dataStats.printMaterial;
 		_keyVars["PRINTSPEED"] = dataStats.absoluteScalar.ToString();
 		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
 	}

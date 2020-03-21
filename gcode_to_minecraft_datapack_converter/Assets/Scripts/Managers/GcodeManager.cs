@@ -20,7 +20,7 @@ public static class GcodeManager
 	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
 	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
 	/// <returns>Modified ParsedDataStats type</returns>
-	public static Task<DataStats> GcodeToParsedPaddedCSV(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	public static Task<DataStats> GcodeToParsedPaddedCSVAsync(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{

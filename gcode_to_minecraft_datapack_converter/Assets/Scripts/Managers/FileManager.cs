@@ -25,11 +25,7 @@ using UnityEngine.UI;
 
 // Upgrade Unity program
 // -Ablity to use custom datapack name
-// -Make folder a zip at the end
-
-// Upgrade Datapack
-// -Make platform bigger and better
-// -Animate print head?
+// -Ability to use custom blocks
 
 
 
@@ -52,19 +48,22 @@ public class FileManager : MonoBehaviour
 	[Header("Objects")]
 	public ProgressTracker progressTrackerPrefab = null;
 	[SerializeField] private StatsManager _statsManager = null;
+	[SerializeField] private DropdownManager _dropDownManager = null;
 
 	private string _gcodeFilePath = "";
 	private string _datapackOutputPath = "";
 	private CancellationTokenSource sourceCancel;
 	private int _currentProgress = 0;
 	private ProgressTracker _progressTracker = null;
+	
 
-	ProgressAmount<float>[] progresses = new ProgressAmount<float>[4]
+	ProgressAmount<float>[] progresses = new ProgressAmount<float>[5]
 	{
 		new ProgressAmount<float>(0),
 		new ProgressAmount<float>(1),
 		new ProgressAmount<float>(2),
-		new ProgressAmount<float>(3)
+		new ProgressAmount<float>(3),
+		new ProgressAmount<float>(4)
 	};
 
 	#region UnityCallbacks
@@ -130,8 +129,10 @@ public class FileManager : MonoBehaviour
 			_progressTracker.Configure("Converting Gcode to Minecraft Datapack...", mainMax, 1);
 
 			_statsManager.Clear();
-			DataStats dataStats = new DataStats(_gcodeFilePath, _datapackOutputPath);
+			DataStats dataStats = new DataStats(_gcodeFilePath);
 			dataStats.absoluteScalar = _absoluteScalarSlider.value;
+			dataStats.printMaterial = _dropDownManager.GetPrintMaterial();
+			dataStats.printBedMaterial = _dropDownManager.GetPrintBedMaterial();
 
 			sourceCancel = new CancellationTokenSource();
 			_currentProgress = 0;
@@ -144,10 +145,10 @@ public class FileManager : MonoBehaviour
 
 			try
 			{
-				dataStats = await GcodeManager.GcodeToParsedPaddedCSV(dataStats, progresses[0], sourceCancel.Token);
+				dataStats = await GcodeManager.GcodeToParsedPaddedCSVAsync(dataStats, progresses[0], sourceCancel.Token);
 				
 				DatapackManager datapackManager = new DatapackManager();
-				dataStats = await datapackManager.Generate(dataStats, progresses[1], sourceCancel.Token);
+				dataStats = await datapackManager.GenerateAsync(dataStats, progresses[1], sourceCancel.Token);
 				
 				if (_computeDatapackStats.isOn)
 				{
@@ -160,7 +161,10 @@ public class FileManager : MonoBehaviour
 				}
 
 				File.Delete(dataStats.parsedGcodePath);
-				
+
+				await Archive.CompressAsync(dataStats.datapackPath, Path.Combine(_datapackOutputPath, dataStats.datapackName + ".zip"), progresses[4], sourceCancel.Token, true);
+
+
 				sourceCancel.Dispose();
 				Destroy(_progressTracker.gameObject);
 			}
