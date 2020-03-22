@@ -35,17 +35,16 @@ public static class GcodeManager
 				{
 					using (var csvFile = new StreamWriter(dataStats.parsedGcodePath))
 					{
-						csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");	// Write comment in csv file
+						csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed"); // Write comment in csv file
+																						// Get total file length in bytes
+						FileInfo gcodeFileInfo = new FileInfo(dataStats.gcodePath);
+						long gcodeFileLength = gcodeFileInfo.Length;
+						long byteCount = 0;
+
+						GcodeStorage lastValues = new GcodeStorage();
+						string currentLine = "";
 						try
 						{
-							// Get total file length in bytes
-							FileInfo gcodeFileInfo = new FileInfo(dataStats.gcodePath);
-							long gcodeFileLength = gcodeFileInfo.Length;
-							long byteCount = 0;
-							
-							GcodeStorage lastValues = new GcodeStorage();
-							string currentLine = "";
-
 							using (var gcodeFile = new StreamReader(dataStats.gcodePath))
 							{
 								// Parse every line in gcode file

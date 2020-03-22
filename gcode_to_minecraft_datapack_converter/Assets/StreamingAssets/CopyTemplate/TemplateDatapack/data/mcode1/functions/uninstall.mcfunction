@@ -1,3 +1,5 @@
+#> Uninstall all varibles and delete created objects
+# Created by MrJohnWeez
 scoreboard objectives remove gp_ArgVar001
 scoreboard objectives remove gp_ArgVar002
 scoreboard objectives remove gp_ArgVar003

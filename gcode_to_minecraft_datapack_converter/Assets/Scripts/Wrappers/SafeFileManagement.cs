@@ -254,16 +254,29 @@ public class SafeFileManagement
 	/// <returns>True if successful</returns>
 	public static bool DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs, string[] excludeExtensions = null, int retryAttempts = 0)
 	{
-		DirectoryInfo[] dirs = GetDirectories(sourceDirName, retryAttempts);
-
 		// If the destination directory doesn't exist, create it.
 		if (!Directory.Exists(destDirName))
 		{
 			Directory.CreateDirectory(destDirName);
 		}
 
-		FileInfo[] files = GetFilesInfo(sourceDirName, retryAttempts);
+		DirectoryInfo[] dirs = GetDirectories(sourceDirName, retryAttempts);
+		
+		// If copying subdirectories, copy them and their contents to new location.
+		if (copySubDirs && dirs != null && dirs.Length > 0)
+		{
+			foreach (DirectoryInfo subdir in dirs)
+			{
+				string temppath = Path.Combine(destDirName, subdir.Name);
+				if (!DirectoryCopy(subdir.FullName, temppath, copySubDirs, excludeExtensions, retryAttempts))
+				{
+					Debug.LogError("Failed to copy sub-directory " + subdir.FullName + " to " + temppath);
+					return false;
+				}
+			}
+		}
 
+		FileInfo[] files = GetFilesInfo(sourceDirName, retryAttempts);
 		if (files != null && files.Length > 0)
 		{
 			foreach (FileInfo file in files)
@@ -288,25 +301,8 @@ public class SafeFileManagement
 				}
 
 			}
-
-			// If copying subdirectories, copy them and their contents to new location.
-			if (copySubDirs && dirs != null && dirs.Length > 0)
-			{
-				foreach (DirectoryInfo subdir in dirs)
-				{
-					string temppath = Path.Combine(destDirName, subdir.Name);
-					if (!DirectoryCopy(subdir.FullName, temppath, copySubDirs, excludeExtensions, retryAttempts))
-					{
-						Debug.LogError("Failed to copy sub-directory " + subdir.FullName + " to " + temppath);
-						return false;
-					}
-				}
-			}
-			return true;
 		}
-
-		Debug.LogError("Failed to copy directory " + sourceDirName + " to " + destDirName);
-		return false;
+		return true;
 	}
 
 	/// <summary>

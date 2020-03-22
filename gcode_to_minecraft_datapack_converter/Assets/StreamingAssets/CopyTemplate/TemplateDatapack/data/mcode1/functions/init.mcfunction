@@ -1,5 +1,5 @@
-say mcode1 is printing...
-
+#> Main setup of the printer and settings
+# Created by MrJohnWeez
 function mcode1:uninstall
 
 # Current pause state
