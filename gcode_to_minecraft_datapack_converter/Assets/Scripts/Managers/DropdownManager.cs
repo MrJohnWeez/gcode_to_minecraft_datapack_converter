@@ -1,8 +1,14 @@
-﻿using System.Collections;
+﻿// Created by MrJohnWeez
+// March 2020
+//
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// Manages the dropdowns for the program
+/// </summary>
 public class DropdownManager : MonoBehaviour
 {
 	[SerializeField] private TMP_Dropdown _printMaterial = null;
@@ -18,16 +24,31 @@ public class DropdownManager : MonoBehaviour
 		_printBedMaterial.SetValueWithoutNotify(17);
 	}
 
+	#region Gets
+	/// <summary>
+	/// Gets the print bed minecraft block id string
+	/// </summary>
+	/// <returns>Minecraft block string</returns>
 	public string GetPrintBedMaterial()
 	{
 		return _printBedMaterial.options[_printBedMaterial.value].text;
 	}
 
+	/// <summary>
+	/// Gets the print material minecraft block id string
+	/// </summary>
+	/// <returns>Minecraft block string</returns>
 	public string GetPrintMaterial()
 	{
 		return _printMaterial.options[_printMaterial.value].text;
 	}
 
+	#endregion Gets
+
+	/// <summary>
+	/// Creates a dropdown list configuration of all blocks within minecraft 1.15.2
+	/// </summary>
+	/// <returns>dropdown list configuration of all block string values</returns>
 	public List<TMP_Dropdown.OptionData> GenerateOptions()
 	{
 		List<TMP_Dropdown.OptionData> newOptions = new List<TMP_Dropdown.OptionData>();

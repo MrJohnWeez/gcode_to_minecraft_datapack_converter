@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿// Created by MrJohnWeez
+// March 2020
+//
+using System;
 using System.IO;
 using UnityEngine;
 using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Parse gcode using this static class
+/// Parse gcode files into a csv file for later use using this class
 /// </summary>
 public static class GcodeManager
 {
@@ -34,25 +35,25 @@ public static class GcodeManager
 				{
 					using (var csvFile = new StreamWriter(dataStats.parsedGcodePath))
 					{
-						csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");
+						csvFile.WriteLine("Xcord,Ycord,Zcord,ShouldExtrude,MoveSpeed");	// Write comment in csv file
 						try
 						{
+							// Get total file length in bytes
 							FileInfo gcodeFileInfo = new FileInfo(dataStats.gcodePath);
 							long gcodeFileLength = gcodeFileInfo.Length;
 							long byteCount = 0;
-
+							
 							GcodeStorage lastValues = new GcodeStorage();
-							lastValues.pos = Vector3.zero;
-							lastValues.exturedAmount = 0;
-							lastValues.moveSpeed = 0;
 							string currentLine = "";
 
 							using (var gcodeFile = new StreamReader(dataStats.gcodePath))
 							{
+								// Parse every line in gcode file
 								while (!gcodeFile.EndOfStream)
 								{
 									currentLine = gcodeFile.ReadLine();
 
+									// Give a progress update
 									byteCount += System.Text.Encoding.Unicode.GetByteCount(currentLine);
 									progess.ReportValue(byteCount / gcodeFileLength, "Parsing Gcode", "Parsing Lines");
 									cancellationToken.ThrowIfCancellationRequested();
@@ -62,9 +63,7 @@ public static class GcodeManager
 									{
 										string g1Code = GcodeLineToCSVLine(currentLine, ref lastValues, ref dataStats);
 										if(g1Code.Length >= 10)
-										{
 											csvFile.WriteLine(g1Code);
-										}
 									}
 								}
 							}
@@ -121,7 +120,7 @@ public static class GcodeManager
 			dataStats.totalGcodeLines++;
 			string mainCodeTrimmed = sections[0].ToUpper().Trim();
 
-			// Is gcode command a move command
+			// Is line a gcode move command
 			if (mainCodeTrimmed.Length == 2 && mainCodeTrimmed[0] == 'G' && mainCodeTrimmed[1] == '1')
 			{
 				dataStats.totalGcodeMoveLines++;
@@ -129,7 +128,7 @@ public static class GcodeManager
 				{
 					string termTrimmed = sections[term].ToUpper().Trim();
 
-					// Term is a minimum of 2 chars
+					// Is term is a minimum of 2 chars
 					if (termTrimmed.Length > 1)
 					{
 						string stringValue = termTrimmed.Substring(1);
@@ -153,6 +152,8 @@ public static class GcodeManager
 						}
 					}
 				}
+
+				// Calculate different stats about the gcode data
 				dataStats.minExtrude = Mathf.Min(dataStats.minExtrude, lastValues.exturedAmount);
 				dataStats.minSpeed = Mathf.Min(dataStats.minSpeed, lastValues.moveSpeed);
 				dataStats.minPos.x = Mathf.Min(dataStats.minPos.x, lastValues.pos.x);

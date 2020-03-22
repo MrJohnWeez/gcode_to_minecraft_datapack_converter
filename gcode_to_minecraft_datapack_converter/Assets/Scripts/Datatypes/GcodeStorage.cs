@@ -1,5 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿// Created by MrJohnWeez
+// March 2020
+//
 using UnityEngine;
 
 /// <summary>

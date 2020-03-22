@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System;
-using System.Threading.Tasks;
+﻿// Created by MrJohnWeez
+// March 2020
+//
 
 /// <summary>
 /// Class that lets values be passed from async functions to main unity thread

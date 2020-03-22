@@ -1,6 +1,8 @@
-﻿using SFB;
+﻿// Created by MrJohnWeez
+// March 2020
+//
+using SFB;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -12,6 +14,7 @@ using UnityEngine;
 /// </summary>
 public class SafeFileManagement
 {
+	#region FileManagement
 	/// <summary>
 	/// Deletes a file and returns wether it was successful or not
 	/// </summary>
@@ -21,39 +24,6 @@ public class SafeFileManagement
 	{
 		File.Delete(path);
 		return !File.Exists(path);
-	}
-
-
-	/// <summary>
-	/// Loads entire file into memory then displays it on the given tmp text object.
-	/// </summary>
-	/// <param name="path">The path of the file to read</param>
-	/// <param name="textObject">Text mesh pro object used to display file contense</param>
-	/// <returns>String Array of file</returns>
-	public static string[] DisplayFile(string path, TMP_Text textObject)
-	{
-		string [] returnThis = null;
-		string fileAsString = "";
-		textObject.text = "Loading file...";
-		try
-		{
-			using (var sr = new StreamReader(path))
-			{
-				fileAsString = sr.ReadToEnd();
-			}
-		}
-		catch (Exception e)
-		{
-			// Let the user know what went wrong.
-			textObject.text = "The file could not be read:\nError: ";
-			textObject.text += e.Message.ToString();
-		}
-		finally
-		{
-			textObject.text = fileAsString;
-			returnThis = fileAsString.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-		}
-		return returnThis;
 	}
 
 	/// <summary>
@@ -117,15 +87,144 @@ public class SafeFileManagement
 		return inFileName;
 	}
 
+
 	/// <summary>
-	/// Returns the given date
+	/// Get Files within given directory
 	/// </summary>
-	/// <returns>Year as string</returns>
-	public static string GetDateNow()
+	/// <param name="sourceDirName">Source directory</param>
+	/// <param name="retryAttempts">Number of attemps to retry get</param>
+	/// <returns>FileInfo array and Null if errors</returns>
+	public static FileInfo[] GetFilesInfo(string sourceDirName, int retryAttempts = 0)
 	{
-		return DateTime.Now.ToString("yyyyMMddHHmmss");
+		FileInfo[] files = null;
+
+
+		if (Directory.Exists(sourceDirName))
+		{
+			DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+			int currAttempts = 0;
+			bool didMove = false;
+			while (!didMove && currAttempts <= retryAttempts)
+			{
+				try
+				{
+					files = dir.GetFiles();
+					didMove = true;
+				}
+				catch (UnauthorizedAccessException accessDenied)
+				{
+					currAttempts++;
+					Debug.Log(accessDenied.Message);
+					Thread.Sleep(50);   // Wait for 50ms before checking again
+					continue;
+				}
+				catch (Exception e)
+				{
+					Debug.Log(e.Message);
+					currAttempts = retryAttempts + 1;
+				}
+			}
+		}
+
+		return files;
 	}
 
+	/// <summary>
+	/// Get File paths within a directory
+	/// </summary>
+	/// <param name="sourceDirName">Source directory</param>
+	/// <param name="retryAttempts">Number of attemps to retry get</param>
+	/// <returns>Full name paths string array and Empty list if error</returns>
+	public static string[] GetFilesPaths(string sourceDirName, int retryAttempts = 0)
+	{
+		FileInfo[] files = GetFilesInfo(sourceDirName, retryAttempts);
+		List<string> fileNameList = new List<string>();
+		foreach (FileInfo file in files)
+		{
+			fileNameList.Add(file.FullName);
+		}
+
+		return fileNameList.ToArray();
+	}
+
+
+	/// <summary>
+	/// Safely copies a file to a new destination
+	/// </summary>
+	/// <param name="fileInfo">Source File</param>
+	/// <param name="destFileName">Destination file</param>
+	/// <param name="overWirteFile">Should file be overwitten</param>
+	/// <param name="retryAttempts">Number of attemps to retry move</param>
+	/// <returns>True if sucessful</returns>
+	public static bool CopyFileTo(FileInfo fileInfo, string destFileName, bool overWirteFile = false, int retryAttempts = 0)
+	{
+		int currAttempts = 0;
+		bool didCopy = false;
+		while (!didCopy && currAttempts <= retryAttempts)
+		{
+			try
+			{
+				fileInfo.CopyTo(destFileName, overWirteFile);
+				didCopy = true;
+			}
+			catch (UnauthorizedAccessException accessDenied)
+			{
+				currAttempts++;
+				Debug.Log(accessDenied.Message);
+				Thread.Sleep(50);   // Wait for 50ms before checking again
+				continue;
+			}
+			catch (Exception e)
+			{
+				Debug.Log(e.Message);
+				currAttempts = retryAttempts + 1;
+			}
+		}
+
+		return File.Exists(destFileName);
+	}
+
+	/// <summary>
+	/// Safely moves a file to a new destination
+	/// </summary>
+	/// <param name="sourceDirName">Cource File</param>
+	/// <param name="destDirName">Destination file</param>
+	/// <param name="retryAttempts">Number of attemps to retry move</param>
+	/// <returns>True if sucessful</returns>
+	public static bool MoveFile(string sourceFileName, string destFileName, int retryAttempts = 0)
+	{
+		if (File.Exists(sourceFileName))
+		{
+			int currAttempts = 0;
+			bool didMove = false;
+			while (!didMove && currAttempts <= retryAttempts)
+			{
+				try
+				{
+					File.Move(sourceFileName, destFileName);
+					didMove = true;
+				}
+				catch (UnauthorizedAccessException accessDenied)
+				{
+					currAttempts++;
+					Debug.Log(accessDenied.Message);
+					Thread.Sleep(50);   // Wait for 50ms before checking again
+					continue;
+				}
+				catch (Exception e)
+				{
+					Debug.Log(e.Message);
+					currAttempts = retryAttempts + 1;
+				}
+			}
+		}
+
+		return File.Exists(destFileName);
+	}
+	#endregion FileManagement
+
+	#region DirecotryManagement
 	/// <summary>
 	/// Opens a native file browers and retunrs a path selcted
 	/// </summary>
@@ -251,65 +350,6 @@ public class SafeFileManagement
 		return dirs;
 	}
 
-	/// <summary>
-	/// Get Files within given directory
-	/// </summary>
-	/// <param name="sourceDirName">Source directory</param>
-	/// <param name="retryAttempts">Number of attemps to retry get</param>
-	/// <returns>FileInfo array and Null if errors</returns>
-	public static FileInfo[] GetFilesInfo(string sourceDirName, int retryAttempts = 0)
-	{
-		FileInfo[] files = null;
-
-
-		if (Directory.Exists(sourceDirName))
-		{
-			DirectoryInfo dir = new DirectoryInfo(sourceDirName);
-
-			int currAttempts = 0;
-			bool didMove = false;
-			while (!didMove && currAttempts <= retryAttempts)
-			{
-				try
-				{
-					files = dir.GetFiles();
-					didMove = true;
-				}
-				catch (UnauthorizedAccessException accessDenied)
-				{
-					currAttempts++;
-					Debug.Log(accessDenied.Message);
-					Thread.Sleep(50);   // Wait for 50ms before checking again
-					continue;
-				}
-				catch (Exception e)
-				{
-					Debug.Log(e.Message);
-					currAttempts = retryAttempts + 1;
-				}
-			}
-		}
-
-		return files;
-	}
-
-	/// <summary>
-	/// Get File paths within a directory
-	/// </summary>
-	/// <param name="sourceDirName">Source directory</param>
-	/// <param name="retryAttempts">Number of attemps to retry get</param>
-	/// <returns>Full name paths string array and Empty list if error</returns>
-	public static string[] GetFilesPaths(string sourceDirName, int retryAttempts = 0)
-	{
-		FileInfo[] files = GetFilesInfo(sourceDirName, retryAttempts);
-		List<string> fileNameList = new List<string>();
-		foreach (FileInfo file in files)
-		{
-			fileNameList.Add(file.FullName);
-		}
-
-		return fileNameList.ToArray();
-	}
 
 	/// <summary>
 	/// Safely moves a directory to a new destination
@@ -349,77 +389,15 @@ public class SafeFileManagement
 		return Directory.Exists(destDirName);
 	}
 
+	#endregion DirecotryManagement
+
+	
 	/// <summary>
-	/// Safely copies a file to a new destination
+	/// Returns the given date
 	/// </summary>
-	/// <param name="fileInfo">Source File</param>
-	/// <param name="destFileName">Destination file</param>
-	/// <param name="overWirteFile">Should file be overwitten</param>
-	/// <param name="retryAttempts">Number of attemps to retry move</param>
-	/// <returns>True if sucessful</returns>
-	public static bool CopyFileTo(FileInfo fileInfo, string destFileName, bool overWirteFile = false, int retryAttempts = 0)
+	/// <returns>Year as string</returns>
+	public static string GetDateNow()
 	{
-		int currAttempts = 0;
-		bool didCopy = false;
-		while (!didCopy && currAttempts <= retryAttempts)
-		{
-			try
-			{
-				fileInfo.CopyTo(destFileName, overWirteFile);
-				didCopy = true;
-			}
-			catch (UnauthorizedAccessException accessDenied)
-			{
-				currAttempts++;
-				Debug.Log(accessDenied.Message);
-				Thread.Sleep(50);   // Wait for 50ms before checking again
-				continue;
-			}
-			catch (Exception e)
-			{
-				Debug.Log(e.Message);
-				currAttempts = retryAttempts + 1;
-			}
-		}
-
-		return File.Exists(destFileName);
-	}
-
-	/// <summary>
-	/// Safely moves a file to a new destination
-	/// </summary>
-	/// <param name="sourceDirName">Cource File</param>
-	/// <param name="destDirName">Destination file</param>
-	/// <param name="retryAttempts">Number of attemps to retry move</param>
-	/// <returns>True if sucessful</returns>
-	public static bool MoveFile(string sourceFileName, string destFileName, int retryAttempts = 0)
-	{
-		if (File.Exists(sourceFileName))
-		{
-			int currAttempts = 0;
-			bool didMove = false;
-			while (!didMove && currAttempts <= retryAttempts)
-			{
-				try
-				{
-					File.Move(sourceFileName, destFileName);
-					didMove = true;
-				}
-				catch (UnauthorizedAccessException accessDenied)
-				{
-					currAttempts++;
-					Debug.Log(accessDenied.Message);
-					Thread.Sleep(50);   // Wait for 50ms before checking again
-					continue;
-				}
-				catch (Exception e)
-				{
-					Debug.Log(e.Message);
-					currAttempts = retryAttempts + 1;
-				}
-			}
-		}
-
-		return File.Exists(destFileName);
+		return DateTime.Now.ToString("yyyyMMddHHmmss");
 	}
 }
