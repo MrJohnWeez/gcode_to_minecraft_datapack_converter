@@ -1,3 +1,5 @@
+#> Configure the print progress bar system
+# Created by MrJohnWeez
 bossbar add mcode1:progressbar "mcode1 print progress"
 bossbar set mcode1:progressbar color green
 bossbar set mcode1:progressbar max MAXLINENUMBER

@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿// Created by MrJohnWeez
+// March 2020
+//
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -22,6 +25,11 @@ public class DataStats
 	// User Settings
 	public float absoluteScalar = 1;
 
+	// Names
+	public string datapackName = "";
+	public string printMaterial = "";
+	public string printBedMaterial = "";
+
 	// File Gen Paths
 	public string gcodePath = "";
 	public string parsedGcodePath = "";
@@ -31,10 +39,10 @@ public class DataStats
 	public string tempFilePath = "";
 	public string unityDataPath = "";
 
-	public DataStats(string inGcodePath, string inDatapackOutputPath)
+	public DataStats(string inGcodePath)
 	{
 		gcodePath = inGcodePath;
-		datapackPath = inDatapackOutputPath;
+		datapackPath = Application.temporaryCachePath;
 		tempFilePath = Application.temporaryCachePath;
 		unityDataPath = Application.dataPath;
 	}

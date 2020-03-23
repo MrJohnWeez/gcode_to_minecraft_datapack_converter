@@ -1,6 +1,8 @@
-﻿using SFB;
+﻿// Created by MrJohnWeez
+// March 2020
+//
+using SFB;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -12,6 +14,7 @@ using UnityEngine;
 /// </summary>
 public class SafeFileManagement
 {
+	#region FileManagement
 	/// <summary>
 	/// Deletes a file and returns wether it was successful or not
 	/// </summary>
@@ -21,39 +24,6 @@ public class SafeFileManagement
 	{
 		File.Delete(path);
 		return !File.Exists(path);
-	}
-
-
-	/// <summary>
-	/// Loads entire file into memory then displays it on the given tmp text object.
-	/// </summary>
-	/// <param name="path">The path of the file to read</param>
-	/// <param name="textObject">Text mesh pro object used to display file contense</param>
-	/// <returns>String Array of file</returns>
-	public static string[] DisplayFile(string path, TMP_Text textObject)
-	{
-		string [] returnThis = null;
-		string fileAsString = "";
-		textObject.text = "Loading file...";
-		try
-		{
-			using (var sr = new StreamReader(path))
-			{
-				fileAsString = sr.ReadToEnd();
-			}
-		}
-		catch (Exception e)
-		{
-			// Let the user know what went wrong.
-			textObject.text = "The file could not be read:\nError: ";
-			textObject.text += e.Message.ToString();
-		}
-		finally
-		{
-			textObject.text = fileAsString;
-			returnThis = fileAsString.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-		}
-		return returnThis;
 	}
 
 	/// <summary>
@@ -117,139 +87,6 @@ public class SafeFileManagement
 		return inFileName;
 	}
 
-	/// <summary>
-	/// Returns the given date
-	/// </summary>
-	/// <returns>Year as string</returns>
-	public static string GetDateNow()
-	{
-		return DateTime.Now.ToString("yyyyMMddHHmmss");
-	}
-
-	/// <summary>
-	/// Opens a native file browers and retunrs a path selcted
-	/// </summary>
-	/// <param name="dialogTitle">What to display on the window popup</param>
-	/// <param name="startingFolder">The folder to start user in</param>
-	/// <returns></returns>
-	public static string FolderPath(string dialogTitle, string startingFolder = "")
-	{
-		string[] selectedRootFolder = StandaloneFileBrowser.OpenFolderPanel(dialogTitle, startingFolder, false);
-
-		if (selectedRootFolder.Length > 0)
-		{
-			return selectedRootFolder[0];
-		}
-
-		return "";
-	}
-
-	/// <summary>
-	/// Copy entire directory to a different location
-	/// </summary>
-	/// <param name="sourceDirName">The folder to copy files from</param>
-	/// <param name="destDirName">The location to copy files to</param>
-	/// <param name="copySubDirs">Should sub files and folders be copied</param>
-	/// <param name="excludeExtensions">String array of any file extensitions to not copy</param>
-	/// <param name="retryAttempts">Number of retried system will preform if errors are encountered</param>
-	/// <returns>True if successful</returns>
-	public static bool DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs, string[] excludeExtensions = null, int retryAttempts = 0)
-	{
-		DirectoryInfo[] dirs = GetDirectories(sourceDirName, retryAttempts);
-
-		// If the destination directory doesn't exist, create it.
-		if (!Directory.Exists(destDirName))
-		{
-			Directory.CreateDirectory(destDirName);
-		}
-
-		FileInfo[] files = GetFilesInfo(sourceDirName, retryAttempts);
-
-		if (files != null && files.Length > 0)
-		{
-			foreach (FileInfo file in files)
-			{
-				string temppath = Path.Combine(destDirName, file.Name);
-				bool skipThisFile = false;
-				if (excludeExtensions != null)
-				{
-					foreach (string ext in excludeExtensions)
-					{
-						skipThisFile = ext == Path.GetExtension(temppath);
-					}
-				}
-
-				if (!skipThisFile)
-				{
-					if (!CopyFileTo(file, temppath, true, retryAttempts))
-					{
-						Debug.LogError("Failed to copy file " + file.Name + " to " + temppath);
-						return false;
-					}
-				}
-
-			}
-
-			// If copying subdirectories, copy them and their contents to new location.
-			if (copySubDirs && dirs != null && dirs.Length > 0)
-			{
-				foreach (DirectoryInfo subdir in dirs)
-				{
-					string temppath = Path.Combine(destDirName, subdir.Name);
-					if (!DirectoryCopy(subdir.FullName, temppath, copySubDirs, excludeExtensions, retryAttempts))
-					{
-						Debug.LogError("Failed to copy sub-directory " + subdir.FullName + " to " + temppath);
-						return false;
-					}
-				}
-			}
-			return true;
-		}
-
-		Debug.LogError("Failed to copy directory " + sourceDirName + " to " + destDirName);
-		return false;
-	}
-
-	/// <summary>
-	/// Get Directories within given path
-	/// </summary>
-	/// <param name="sourceDirName">Source direcotry</param>
-	/// <param name="retryAttempts">Number of attemps to retry get</param>
-	/// <returns>DirectoryInfo array and Null if errors</returns>
-	public static DirectoryInfo[] GetDirectories(string sourceDirName, int retryAttempts = 0)
-	{
-		DirectoryInfo[] dirs = null;
-
-		if (Directory.Exists(sourceDirName))
-		{
-			DirectoryInfo dir = new DirectoryInfo(sourceDirName);
-
-			int currAttempts = 0;
-			bool didMove = false;
-			while (!didMove && currAttempts <= retryAttempts)
-			{
-				try
-				{
-					dirs = dir.GetDirectories();
-					didMove = true;
-				}
-				catch (UnauthorizedAccessException accessDenied)
-				{
-					currAttempts++;
-					Debug.Log(accessDenied.Message);
-					Thread.Sleep(50);   // Wait for 50ms before checking again
-					continue;
-				}
-				catch (Exception e)
-				{
-					Debug.Log(e.Message);
-					currAttempts = retryAttempts + 1;
-				}
-			}
-		}
-
-		return dirs;
-	}
 
 	/// <summary>
 	/// Get Files within given directory
@@ -311,43 +148,6 @@ public class SafeFileManagement
 		return fileNameList.ToArray();
 	}
 
-	/// <summary>
-	/// Safely moves a directory to a new destination
-	/// </summary>
-	/// <param name="sourceDirName">Source Directory</param>
-	/// <param name="destDirName">Destination directory</param>
-	/// <param name="retryAttempts">Number of attemps to retry move</param>
-	/// <returns>True if sucessful</returns>
-	public static bool MoveDirectory(string sourceDirName, string destDirName, int retryAttempts = 0)
-	{
-		if (Directory.Exists(sourceDirName))
-		{
-			int currAttempts = 0;
-			bool didMove = false;
-			while (!didMove && currAttempts <= retryAttempts)
-			{
-				try
-				{
-					Directory.Move(sourceDirName, destDirName);
-					didMove = true;
-				}
-				catch (UnauthorizedAccessException accessDenied)
-				{
-					currAttempts++;
-					Debug.Log(accessDenied.Message);
-					Thread.Sleep(50);   // Wait for 50ms before checking again
-					continue;
-				}
-				catch (Exception e)
-				{
-					Debug.Log(e.Message);
-					currAttempts = retryAttempts + 1;
-				}
-			}
-		}
-
-		return Directory.Exists(destDirName);
-	}
 
 	/// <summary>
 	/// Safely copies a file to a new destination
@@ -421,5 +221,179 @@ public class SafeFileManagement
 		}
 
 		return File.Exists(destFileName);
+	}
+	#endregion FileManagement
+
+	#region DirecotryManagement
+	/// <summary>
+	/// Opens a native file browers and retunrs a path selcted
+	/// </summary>
+	/// <param name="dialogTitle">What to display on the window popup</param>
+	/// <param name="startingFolder">The folder to start user in</param>
+	/// <returns></returns>
+	public static string FolderPath(string dialogTitle, string startingFolder = "")
+	{
+		string[] selectedRootFolder = StandaloneFileBrowser.OpenFolderPanel(dialogTitle, startingFolder, false);
+
+		if (selectedRootFolder.Length > 0)
+		{
+			return selectedRootFolder[0];
+		}
+
+		return "";
+	}
+
+	/// <summary>
+	/// Copy entire directory to a different location
+	/// </summary>
+	/// <param name="sourceDirName">The folder to copy files from</param>
+	/// <param name="destDirName">The location to copy files to</param>
+	/// <param name="copySubDirs">Should sub files and folders be copied</param>
+	/// <param name="excludeExtensions">String array of any file extensitions to not copy</param>
+	/// <param name="retryAttempts">Number of retried system will preform if errors are encountered</param>
+	/// <returns>True if successful</returns>
+	public static bool DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs, string[] excludeExtensions = null, int retryAttempts = 0)
+	{
+		// If the destination directory doesn't exist, create it.
+		if (!Directory.Exists(destDirName))
+		{
+			Directory.CreateDirectory(destDirName);
+		}
+
+		DirectoryInfo[] dirs = GetDirectories(sourceDirName, retryAttempts);
+		
+		// If copying subdirectories, copy them and their contents to new location.
+		if (copySubDirs && dirs != null && dirs.Length > 0)
+		{
+			foreach (DirectoryInfo subdir in dirs)
+			{
+				string temppath = Path.Combine(destDirName, subdir.Name);
+				if (!DirectoryCopy(subdir.FullName, temppath, copySubDirs, excludeExtensions, retryAttempts))
+				{
+					Debug.LogError("Failed to copy sub-directory " + subdir.FullName + " to " + temppath);
+					return false;
+				}
+			}
+		}
+
+		FileInfo[] files = GetFilesInfo(sourceDirName, retryAttempts);
+		if (files != null && files.Length > 0)
+		{
+			foreach (FileInfo file in files)
+			{
+				string temppath = Path.Combine(destDirName, file.Name);
+				bool skipThisFile = false;
+				if (excludeExtensions != null)
+				{
+					foreach (string ext in excludeExtensions)
+					{
+						skipThisFile = ext == Path.GetExtension(temppath);
+					}
+				}
+
+				if (!skipThisFile)
+				{
+					if (!CopyFileTo(file, temppath, true, retryAttempts))
+					{
+						Debug.LogError("Failed to copy file " + file.Name + " to " + temppath);
+						return false;
+					}
+				}
+
+			}
+		}
+		return true;
+	}
+
+	/// <summary>
+	/// Get Directories within given path
+	/// </summary>
+	/// <param name="sourceDirName">Source direcotry</param>
+	/// <param name="retryAttempts">Number of attemps to retry get</param>
+	/// <returns>DirectoryInfo array and Null if errors</returns>
+	public static DirectoryInfo[] GetDirectories(string sourceDirName, int retryAttempts = 0)
+	{
+		DirectoryInfo[] dirs = null;
+
+		if (Directory.Exists(sourceDirName))
+		{
+			DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+			int currAttempts = 0;
+			bool didMove = false;
+			while (!didMove && currAttempts <= retryAttempts)
+			{
+				try
+				{
+					dirs = dir.GetDirectories();
+					didMove = true;
+				}
+				catch (UnauthorizedAccessException accessDenied)
+				{
+					currAttempts++;
+					Debug.Log(accessDenied.Message);
+					Thread.Sleep(50);   // Wait for 50ms before checking again
+					continue;
+				}
+				catch (Exception e)
+				{
+					Debug.Log(e.Message);
+					currAttempts = retryAttempts + 1;
+				}
+			}
+		}
+
+		return dirs;
+	}
+
+
+	/// <summary>
+	/// Safely moves a directory to a new destination
+	/// </summary>
+	/// <param name="sourceDirName">Source Directory</param>
+	/// <param name="destDirName">Destination directory</param>
+	/// <param name="retryAttempts">Number of attemps to retry move</param>
+	/// <returns>True if sucessful</returns>
+	public static bool MoveDirectory(string sourceDirName, string destDirName, int retryAttempts = 0)
+	{
+		if (Directory.Exists(sourceDirName))
+		{
+			int currAttempts = 0;
+			bool didMove = false;
+			while (!didMove && currAttempts <= retryAttempts)
+			{
+				try
+				{
+					Directory.Move(sourceDirName, destDirName);
+					didMove = true;
+				}
+				catch (UnauthorizedAccessException accessDenied)
+				{
+					currAttempts++;
+					Debug.Log(accessDenied.Message);
+					Thread.Sleep(50);   // Wait for 50ms before checking again
+					continue;
+				}
+				catch (Exception e)
+				{
+					Debug.Log(e.Message);
+					currAttempts = retryAttempts + 1;
+				}
+			}
+		}
+
+		return Directory.Exists(destDirName);
+	}
+
+	#endregion DirecotryManagement
+
+	
+	/// <summary>
+	/// Returns the given date
+	/// </summary>
+	/// <returns>Year as string</returns>
+	public static string GetDateNow()
+	{
+		return DateTime.Now.ToString("yyyyMMddHHmmss");
 	}
 }

@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿// Created by MrJohnWeez
+// March 2020
+//
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
@@ -13,33 +15,32 @@ public class DatapackManager
 {
 	#region Constants
 	private const int C_numberOfIORetryAttempts = 5;
-	private const int C_LinesPerFunction = 10000; // Muse be lower then 65000ish (command limit within datapack functions)
+	private const int C_LinesPerMcfunction = 10000; // Muse be lower then 30000ish due to multiple lines per gcode command
 
 	// Minecraft blocks
-	private const string C_BlockType = "stone";
 	private const string C_BlockAir = "air";
-	private const string C_PrintBedBlock = "black_concrete";
 	private const string C_GuideLinesBlock = "white_concrete";
 
-	// String Constants
+	// Prefix and Suffix
 	private const string C_StartFunctionSuffix = "_start";
 	private const string C_StopFunctionSuffix = "_stop";
 	private const string C_PauseFunctionSuffix = "_pause";
 	private const string C_OptionsFunctionSuffix = "_options";
 	private const string C_ScoreboardPrefix = "gp_";
+
+
 	private const string C_Line = "line";
 	private const string C_MainDatapackName = "GcodePrinter";
+
+	// Function names
 	private const string C_UpdateCodeLineName = "update_code_line";
-	private const string C_ExecuteMcodeName = "execute_mcode";
 	private const string C_ClearPrintBedPrefix = "clear_print_bed";
 
 	// Template file names
 	private const string C_UpdateCodeLine = "update_code_line.mcfunction";
 	private const string C_ExecuteMcode = "execute_mcode.mcfunction";
 	private const string C_ProgressBar = "create_progress_bar.mcfunction";
-
-	private const string C_TemplateLineNoFill = "template_line_no_fill.mcfunction";
-	private const string C_TemplateLineWithFill = "template_line_with_fill.mcfunction";
+	
 	private const string C_TemplateUpdateCode = "template_update_code.mcfunction";
 	private const string C_TemplateExecuteLine = "template_execute_line.mcfunction";
 	private const string C_TemplateFinishedLine = "template_finished_code.mcfunction";
@@ -53,7 +54,6 @@ public class DatapackManager
 	private const string C_ZNum = "ZNUM";
 	private const string C_PlaceBlock = "PLACEBLOCK";
 	private const string C_MaxLineNumber = "MAXLINENUMBER";
-
 
 	//Template Names
 	private const string C_TemplateName = "TemplateDatapack";
@@ -72,25 +72,25 @@ public class DatapackManager
 	#endregion Constants
 
 	#region DynamicStrings
-	private string _gcodeFilePath = "";     // Path of gcode file on disk
-	private string _gcodeFileName = "";     // Main name of gcode file (without .gcode)
-	private string _dateCreated = "";       // Date datapack was created (almost UUID)
-	private string _datapackUUID = "";      // Simulates a UUID because the use case of this program is low
-	private string _datapackName = "";      // Name of the datapack
-	private string _shortUUID = "";         // Name used to make scoreboard values unique (10 chars or less)
-	private string _fakePlayerName = "";    // The fake player name that datapack will use (39 chars or less)
-	private string _outputRoot = "";        // The root folder where the datapack will be saved to
+	private string _gcodeFilePath = "";			// Path of gcode file on disk
+	private string _gcodeFileName = "";			// Main name of gcode file (without .gcode)
+	private string _dateCreated = "";			// Date datapack was created (almost UUID)
+	private string _datapackUUID = "";			// Simulates a UUID because the use case of this program is low
+	private string _datapackName = "";			// Name of the datapack
+	private string _shortUUID = "";				// Name used to make scoreboard values unique (10 chars or less)
+	private string _fakePlayerName = "";		// The fake player name that datapack will use (39 chars or less)
+	private string _outputRoot = "";			// The root folder where the datapack will be saved to
 
 	// Datapack folder and file paths
-	private string _datapackRootPath = "";  // Path where datapack will be saved on disk ----- data
-	private string _dataFolderPath = "";    // Data folder within datapack ------------------- datapack/data
-	private string _namespacePath = "";     // Namespace within datapack --------------------- datapack/data/namespace
-	private string _namespaceFunctions = "";// Where all functions will generate ------------- datapack/data/namespace/functions
-	private string _printFunctions = "";    // PrintFunction folder within datapack ---------- datapack/data/print/functions
-	private string _datapackStart = "";     // File name of mcode printing start function ---- datapack/data/print/functions/start.mcfunction
-	private string _datapackStop = "";      // File name of mcode printing stop function ----- datapack/data/print/functions/stop.mcfunction
-	private string _datapackPause = "";     // File name of mcode printing poause function --- datapack/data/print/functions/pause.mcfunction
-	private string _datapackMcFuncTags = "";// File path for --------------------------------- datapack/data/minecraft/tags/functions
+	private string _datapackRootPath = "";		// Path where datapack will be saved on disk ----- data
+	private string _dataFolderPath = "";		// Data folder within datapack ------------------- datapack/data
+	private string _namespacePath = "";			// Namespace within datapack --------------------- datapack/data/namespace
+	private string _namespaceFunctions = "";	// Where all functions will generate ------------- datapack/data/namespace/functions
+	private string _printFunctions = "";		// PrintFunction folder within datapack ---------- datapack/data/print/functions
+	private string _datapackStart = "";			// File name of mcode printing start function ---- datapack/data/print/functions/start.mcfunction
+	private string _datapackStop = "";			// File name of mcode printing stop function ----- datapack/data/print/functions/stop.mcfunction
+	private string _datapackPause = "";			// File name of mcode printing poause function --- datapack/data/print/functions/pause.mcfunction
+	private string _datapackMcFuncTags = "";	// File path for --------------------------------- datapack/data/minecraft/tags/functions
 	#endregion DynamicStrings
 
 	private Dictionary<string, string> _keyVars = new Dictionary<string, string>();
@@ -102,19 +102,32 @@ public class DatapackManager
 	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
 	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
 	/// <returns>Modified ParsedDataStats type</returns>
-	public Task<DataStats> Generate(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	public Task<DataStats> GenerateAsync(DataStats dataStats, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		return Task.Run(() =>
 		{
 			progess.ReportValue(0.0f, "Generating Datapack Files", "Creating file names");
 			_gcodeFileName = MakeSafeString(SafeFileManagement.GetFileName(Path.GetFileName(dataStats.gcodePath)));
 			_dateCreated = SafeFileManagement.GetDateNow();
-			_datapackUUID = _gcodeFileName + "_" + _dateCreated;
-			_datapackName = C_MainDatapackName + "_" + _datapackUUID;
+
+			// Use default name if custom name is empty
+			if(dataStats.datapackName.IsEmpty())
+			{
+				_datapackUUID = _gcodeFileName + "_" + _dateCreated;
+				_datapackName = C_MainDatapackName + "_" + _datapackUUID;
+				dataStats.datapackName = _datapackName;
+			}
+			else
+			{
+				_datapackUUID = dataStats.datapackName;
+				_datapackName = dataStats.datapackName;
+			}
+			
 			_shortUUID = _datapackUUID.FirstLast5();
 			_fakePlayerName = C_FakePlayerChar + _datapackUUID.Truncate(-30);
 			_outputRoot = dataStats.datapackPath;
 
+			// The root of the datapack generation tasks
 			if (!_outputRoot.IsEmpty())
 			{
 				progess.ReportValue(0.05f, "Generating Datapack Files", "Copying Template");
@@ -128,7 +141,7 @@ public class DatapackManager
 				UpdateCopiedFiles(dataStats);
 
 				progess.ReportValue(0.15f, "Generating Datapack Files", "Writing files");
-				WriteMinecraftCodeFiles(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
+				WriteMinecraftCodeFilesAsync(dataStats.totalMcodeLines, dataStats.parsedGcodePath, progess, cancellationToken);
 
 				GeneratePrintBed(dataStats);
 			}
@@ -142,7 +155,7 @@ public class DatapackManager
 	/// Parse given string and return new string that is mcdatapack allowed
 	/// </summary>
 	/// <param name="name">String to be paresed</param>
-	/// <returns></returns>
+	/// <returns>A datapack safe string with characters a-z0-9_-</returns>
 	private string MakeSafeString(string name)
 	{
 		name = name.ToLower();
@@ -164,7 +177,7 @@ public class DatapackManager
 			for (int z = -8; z <= 256; z += 16)
 			{
 				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 250 " + (z + 15).ToString() + " minecraft:" + C_BlockAir + " replace\n";
-				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 0 " + (z + 15).ToString() + " minecraft:" + C_PrintBedBlock + " replace\n";
+				commands += "fill " + x.ToString() + " 0 " + z.ToString() + " " + (x + 7).ToString() + " 0 " + (z + 15).ToString() + " minecraft:" + dataStats.printBedMaterial + " replace\n";
 			}
 		}
 		
@@ -173,6 +186,7 @@ public class DatapackManager
 		commands += "fill 256 0 256 256 0 0 minecraft:" + C_GuideLinesBlock + " replace\n"; //Back
 		commands += "fill 256 0 256 0 0 256 minecraft:" + C_GuideLinesBlock + " replace\n"; //Right
 
+		// Create dots on printbed
 		for (int x = 0; x <= 256; x += 16)
 		{
 			for (int z = 0; z <= 256; z += 16)
@@ -185,7 +199,18 @@ public class DatapackManager
 		SafeFileManagement.SetFileContents(filePath, commands);
 	}
 
-	private void WriteMinecraftCodeFiles(int totalLines, string mcodeCSVFilePath, ProgressAmount<float> progess, CancellationToken cancellationToken)
+	/// <summary>
+	/// Writes all positional data into mcfunctions. 3 for loops limit
+	/// the number of lines written into a .mcfunction since they have a limit
+	/// and since there is a balance between the number of mcfunctions vs how long
+	/// those functions are. To many mcfunction = poor minecraft loading times and performance.
+	/// To many lines in a function = missing data and/or poor performance.
+	/// </summary>
+	/// <param name="totalLines">Total number of lines needed to write</param>
+	/// <param name="mcodeCSVFilePath">Path to a parsed padded csv file from a gcode file</param>
+	/// <param name="progess">The ProgressAmount class that keeps track of this function's progress 0.0 -> 1.0</param>
+	/// <param name="cancellationToken">Token that allows async function to be canceled</param>
+	private void WriteMinecraftCodeFilesAsync(int totalLines, string mcodeCSVFilePath, ProgressAmount<float> progess, CancellationToken cancellationToken)
 	{
 		if (File.Exists(mcodeCSVFilePath))
 		{
@@ -196,12 +221,12 @@ public class DatapackManager
 					mcodeCSVData.ReadLine();   // Skip header
 					GcodeStorage parsedData = null;
 
-					// Get the template file contense
+					// Get the template file contents
 					string templateUpdateCode = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateUpdateCode));
 					string templateExecuteLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateExecuteLine));
 					string templateFinishedLine = SafeFileManagement.GetFileContents(Path.Combine(_namespaceFunctions, C_TemplateFinishedLine));
 
-					long factor = C_LinesPerFunction;
+					long factor = C_LinesPerMcfunction;
 					long factorPow2 = factor * factor;
 					long facotrPow3 = factorPow2 * factor;
 					long lineAmount = totalLines;
@@ -246,7 +271,7 @@ public class DatapackManager
 								string currentUpdateCode = "";
 								string readData = "";
 
-								// Send progress update every 250 lines processed
+								// Send progress update every 250 lines written
 								if (lvl3 % 250 == 0)
 								{
 									progess.ReportValue(0.15f + ((float)lvl3 / lineAmount) * 0.85f, "Generating Datapack Files", "Writing file " + lvl3 + "/" + lineAmount);
@@ -331,11 +356,15 @@ public class DatapackManager
 		_keyVars["gp_ArgVar"] = scoreboardVar;
 		_keyVars["#fakePlayerVar"] = _fakePlayerName;
 		_keyVars["TAGG"] = tag;
-		_keyVars["FILLBLOCK"] = C_BlockType;
+		_keyVars["FILLBLOCK"] = dataStats.printMaterial;
 		_keyVars["PRINTSPEED"] = dataStats.absoluteScalar.ToString();
 		_keyVars["PRINTTOLERANCE"] = (dataStats.absoluteScalar + 0.1f).ToString();
 	}
 
+	/// <summary>
+	/// Replace the key vars within the 3 main directories
+	/// </summary>
+	/// <param name="dataStats"></param>
 	private void UpdateCopiedFiles(DataStats dataStats)
 	{
 		InitulizeKeyVars(dataStats);
@@ -436,7 +465,12 @@ public class DatapackManager
 		}
 	}
 
-
+	/// <summary>
+	/// Combine number of strings into a path that will be used within a
+	/// datapack
+	/// </summary>
+	/// <param name="values">List of strings to combine</param>
+	/// <returns>Combined strings with datapack slash inbetween</returns>
 	private string DatapackPath(params string[] values)
 	{
 		if (values.Length < 2)
@@ -449,22 +483,7 @@ public class DatapackManager
 		}
 
 		return newString.TrimEnd(newString[newString.Length - 1]);
-
 	}
-	/// <summary>
-	/// Prints all vars to unity console
-	/// </summary>
-	private void LogDynamicVars()
-	{
-		Debug.Log("_gcodeFilePath: " + _gcodeFilePath + " \n" +
-			"_gcodeFileName: " + _gcodeFileName + "\n" +
-			"_dateCreated: " + _dateCreated + "\n" +
-			"_datapackUUID: " + _datapackUUID + "\n" +
-			"_datapackName: " + _datapackName + "\n" +
-			"_shortName: " + _shortUUID + "\n" +
-			"_fakePlayerName: " + _fakePlayerName);
-	}
-
 
 	private void LogError(string text, Exception error)
 	{
