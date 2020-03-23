@@ -162,6 +162,10 @@ public class FileManager : MonoBehaviour
 				if (File.Exists(dataStats.parsedGcodePath))
 					File.Delete(dataStats.parsedGcodePath);
 
+				// Remove any half way complete datapack files
+				if (Directory.Exists(dataStats.datapackPath))
+					Directory.Delete(dataStats.datapackPath, true);
+
 				if (_progressTracker)
 					Destroy(_progressTracker);
 
