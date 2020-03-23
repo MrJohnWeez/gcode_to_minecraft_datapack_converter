@@ -134,10 +134,10 @@ public static class GcodeManager
 						switch (termTrimmed[0])
 						{
 							case 'X':
-								lastValues.pos.x = float.Parse(stringValue);
+								lastValues.pos.z = float.Parse(stringValue);
 								break;
 							case 'Y':
-								lastValues.pos.z = float.Parse(stringValue);
+								lastValues.pos.x = float.Parse(stringValue);
 								break;
 							case 'Z':
 								lastValues.pos.y = float.Parse(stringValue);
