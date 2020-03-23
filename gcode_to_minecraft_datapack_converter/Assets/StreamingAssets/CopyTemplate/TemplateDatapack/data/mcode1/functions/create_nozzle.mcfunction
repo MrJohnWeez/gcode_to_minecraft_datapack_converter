@@ -1,4 +1,5 @@
 #> Create a nozzle out of armor stands
+# Created by MrJohnWeez
 execute at @s run summon armor_stand ~0 ~0 ~0 {Pose:{Head:[0f,0f,0f]},DisabledSlots:2039583,Invisible:1b,NoGravity:1b,ArmorItems:[{},{},{},{Count:1b,id:hopper}],Tags:[TAGGNozzle1,TAGGNozzleGroup,TAGGPrintGroup,PrinterArmor],Invulnerable:1b}
 execute at @s run summon armor_stand ~0 ~0 ~0 {Pose:{Head:[0f,90f,0f]},DisabledSlots:2039583,Invisible:1b,NoGravity:1b,ArmorItems:[{},{},{},{Count:1b,id:hopper}],Tags:[TAGGNozzle2,TAGGNozzleGroup,TAGGPrintGroup,PrinterArmor],Invulnerable:1b}
 execute at @s run summon armor_stand ~0 ~0 ~0 {Pose:{Head:[0f,45f,0f]},DisabledSlots:2039583,Invisible:1b,NoGravity:1b,ArmorItems:[{},{},{},{Count:1b,id:hopper}],Tags:[TAGGNozzle3,TAGGNozzleGroup,TAGGPrintGroup,PrinterArmor],Invulnerable:1b}

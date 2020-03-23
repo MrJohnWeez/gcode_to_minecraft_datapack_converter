@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿// Created by MrJohnWeez
+// March 2020
+//
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 

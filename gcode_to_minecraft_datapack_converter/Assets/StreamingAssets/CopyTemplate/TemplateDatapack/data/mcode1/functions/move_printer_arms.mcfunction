@@ -1,15 +1,16 @@
 #> Add details to the printer
+# Created by MrJohnWeez
+
 # Spawn particles for the print arms decrease particles depending on quality settings 
-execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle sweep_attack ~ ~2.3 127 0 0 70 0 500 force
-execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle sweep_attack ~ 127 -10 0 70 0 0 500 force
-execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle sweep_attack ~ 127 264 0 70 0 0 500 force
-execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle sweep_attack 127 ~2.3 ~ 70 0 0 0 500 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle flash ~ ~2.3 127 0 0 70 0 500 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle flash ~ 127 -10 0 70 0 0 500 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle flash ~ 127 264 0 70 0 0 500 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 0 at @s run particle flash 127 ~2.3 ~ 70 0 0 0 500 force
 
-execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle sweep_attack ~ ~2.3 127 0 0 70 0 200 force
-execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle sweep_attack ~ 127 -10 0 70 0 0 200 force
-execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle sweep_attack ~ 127 264 0 70 0 0 200 force
-execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle sweep_attack 127 ~2.3 ~ 70 0 0 0 200 force
-
+execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle flash ~ ~2.3 127 0 0 70 0 200 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle flash ~ 127 -10 0 70 0 0 200 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle flash ~ 127 264 0 70 0 0 200 force
+execute if score #fakePlayerVar gp_ArgVar006 matches 1 at @s run particle flash 127 ~2.3 ~ 70 0 0 0 200 force
 
 # Move nozzle model into place every frame
 execute at @s run teleport @e[type=armor_stand,tag=TAGGNozzleGroup] @s

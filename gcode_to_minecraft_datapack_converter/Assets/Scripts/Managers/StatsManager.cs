@@ -1,11 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿// Created by MrJohnWeez
+// March 2020
+//
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI;
 
 /// <summary>
-/// This manager will display parsed data stats for the user to view
+/// This manager will display parsed data stats to the user
 /// </summary>
 public class StatsManager : MonoBehaviour
 {
@@ -38,10 +38,11 @@ public class StatsManager : MonoBehaviour
 	public void DisplayStats(string title, DataStats dataStats, DatapackStats datapackStats)
 	{
 		_title.text = title;
+
+		// Order of added stats matter
 		AddStat("Estimated print time: " + dataStats.estimatedPrintTime.ToString("F1") + " seconds");
 		AddStat("Datapack command count: " + datapackStats.linesOfCode);
 		AddStat("Datapack functions count: " + datapackStats.numOfFunctions);
-
 		AddStat("Number of parsed Gcode lines: " + dataStats.totalGcodeLines);
 		AddStat("Number of G1 codes: " + dataStats.totalGcodeMoveLines);
 		AddStat("Datapack files count: " + datapackStats.numOfFiles);

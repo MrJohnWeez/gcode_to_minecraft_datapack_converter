@@ -1,5 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿// Created by MrJohnWeez
+// March 2020
+//
 using UnityEngine;
 using System.IO;
 using System;
@@ -33,8 +34,10 @@ public static class TimeEstimator
 			
 			try
 			{
+				// Get the length of the file in bytes
 				FileInfo csvFileInfo = new FileInfo(parsedCSVFilePath);
 				long csvFileLength = csvFileInfo.Length;
+
 				GcodeStorage currentValues = new GcodeStorage();
 				GcodeStorage prevValues = null;
 
@@ -47,6 +50,7 @@ public static class TimeEstimator
 					{
 						currentLine = csvFile.ReadLine();
 
+						// Send progress update
 						byteCount += System.Text.Encoding.Unicode.GetByteCount(currentLine);
 						progess.ReportValue(byteCount / csvFileLength, "Calculating Estimated Print Time", "Reading temp CSV file");
 						cancellationToken.ThrowIfCancellationRequested();
