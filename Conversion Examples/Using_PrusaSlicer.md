@@ -11,12 +11,12 @@ It is recomended to use the latest version of  [PrusaSlicer](https://www.prusa3d
 1. Open PrusaSlicer v2.0+
 2. Select File > Import > Import Config
 
-   ![Import Settings](Resources\Images\Screenshots\Import_Settings\Import_Settings.png)
+   ![Import Settings](Resources/Images/Screenshots/Import_Settings/Import_Settings.png)
 
 3. Select **Minecraft_config.ini** (located in *gcode_to_minecraft_datapack_converter\Conversion Examples\Minecraft_config.ini*)
 4. Drag and drop a .stl file into the main window
 
-   ![Final Results](Resources\Images\Screenshots\Import_Settings\Final_Results.png)
+   ![Final Results](Resources/Images/Screenshots/Import_Settings/Final_Results.png)
 
 5. Click Export-G-code when ready
 6. Use the Gcode -> Datapack Conversion tool to convert the gcode file into a Minecraft Datapack
