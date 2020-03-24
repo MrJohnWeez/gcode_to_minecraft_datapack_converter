@@ -8,7 +8,7 @@ using UnityEngine;
 /// <summary>
 /// Simple class that re-directs user to Websites
 /// </summary>
-public class WebManager : MonoBehaviour
+public class WebManager: MonoBehaviour
 {
 	/// <summary>
 	/// Open MrJohnWeez Website
@@ -19,10 +19,10 @@ public class WebManager : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Open MrJohnWeez Website
+	/// Open DownloadResourcePack Website
 	/// </summary>
-	public void DownloadResourcePack()
+	public void ToResourcePackSite()
 	{
-		Application.OpenURL("https://github.com/MrJohnWeez/gcode_to_minecraft_datapack_converter/releases");
+		Application.OpenURL("https://github.com/MrJohnWeez/3D_Printer_Emulator_In_Minecraft/releases");
 	}
 }
