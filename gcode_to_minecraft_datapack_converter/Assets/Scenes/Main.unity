@@ -949,7 +949,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 42113603}
-        m_MethodName: DownloadResourcePack
+        m_MethodName: ToResourcePackSite
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4665,7 +4665,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 42113603}
+      - m_Target: {fileID: 0}
         m_MethodName: ToMrJohnWeezSite
         m_Mode: 1
         m_Arguments:
