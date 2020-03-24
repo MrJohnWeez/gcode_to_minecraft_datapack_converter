@@ -4,14 +4,14 @@
 
 ## Minecraft World and Datapack Examples
 
-View the [3D_Printer_Emulator_In_Minecraft](https://github.com/MrJohnWeez/3D_Printer_Emulator_In_Minecraft/releases?raw=true "3D_Printer_Emulator_In_Minecraft") repository to download a Minecraft save file for java edition. This contains the datapack examples from which were generated using this program
+View the [3D_Printer_Emulator_In_Minecraft](https://github.com/MrJohnWeez/3D_Printer_Emulator_In_Minecraft/releases) repository to download a Minecraft save file for java edition. This contains the datapack examples from which were generated using this program
 
 ## Installation Instructions
 
 1. [Download Gcode_To_Minecraft_Datapack_Converter_vX.X.zip](https://github.com/MrJohnWeez/gcode_to_minecraft_datapack_converter/releases)
 2. You may need to press Keep when using Chrome [See why](https://support.google.com/webmasters/thread/23193211?hl=en&msgid=24301018)
 
-    ![Ignore Warning](Resources\Images\Screenshots\Errors\DownloadWarning.png)
+    ![Ignore Warning](Resources/Images/Screenshots/Errors/DownloadWarning.png?raw=true "Chrome Warning")
 3. Run program
    1. Use program within .zip
       1. Double click on **Gcode_To_Minecraft_Datapack_Converter_vX.X.zip**
@@ -23,7 +23,7 @@ View the [3D_Printer_Emulator_In_Minecraft](https://github.com/MrJohnWeez/3D_Pri
 
 ## How To Use
 
-![Help Guide](Resources\Images\Screenshots\Gcode_To_Datapack_Converter\HelpGuide.png?raw=true "Help Guide")
+![Help Guide](Resources\Images\Screenshots\Gcode_To_Datapack_Converter\HelpGuide.png?raw=true "Gcode To Minecraft Datapack Converter Help Guide")
 
 1. Select the Gcode file you want to convert
 2. Select where you want the datapack to be saved to
